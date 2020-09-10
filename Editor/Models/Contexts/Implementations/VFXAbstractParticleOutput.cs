@@ -95,6 +95,10 @@ namespace UnityEditor.VFX
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("When enabled, particles will cast shadows.")]
         protected bool castShadows = false;
 
+        // MyVFX
+        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("When enabled, particles will receive shadows.")]
+        protected bool receiveShadows = false;
+
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("When enabled, an exposure weight slider appears in the current output. The slider can be used to control how much influence exposure control will have on the particles.")]
         protected bool useExposureWeight = false;
 
@@ -102,6 +106,9 @@ namespace UnityEditor.VFX
 
         // IVFXSubRenderer interface
         public virtual bool hasShadowCasting { get { return castShadows; } }
+
+        // MyVFX
+        public virtual bool hasShadowReceiving { get { return receiveShadows; } }
 
         protected virtual bool needsExposureWeight { get { return true; } }
 
@@ -351,6 +358,13 @@ namespace UnityEditor.VFX
 
                 if (HasStrips(false))
                     yield return "HAS_STRIPS";
+
+                // MyVFX
+                if (hasShadowReceiving)
+                    yield return "USE_RECEIVE_SHADOWS";
+                
+                // MyVFX
+                yield return "VFX_NEEDS_POSWS_INTERPOLATOR";
             }
         }
 

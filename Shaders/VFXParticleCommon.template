@@ -154,4 +154,7 @@ float4 color = VFXGetFragmentColor(i);
 	o.color = SampleGradient(gradient, VFX_TEXTURE_COLOR.a * color.a) * float4(color.rgb,1.0);
 #endif
 
+// MyVFX
+o.color = VFXApplyShadow(o.color, i);
+
 ${VFXEnd}

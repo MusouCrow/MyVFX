@@ -4,6 +4,9 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
+// MyVFX
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
 float3 _LightDirection;
 
 void VFXTransformPSInputs(inout VFX_VARYING_PS_INPUTS input) {}
@@ -137,5 +140,19 @@ float4 VFXApplyFog(float4 color,float4 posCS,float3 posWS)
 
 float4 VFXApplyPreExposure(float4 color, VFX_VARYING_PS_INPUTS input)
 {
+    return color;
+}
+
+// MyVFX
+float4 VFXApplyShadow(float4 color, float3 posWS) {
+    float4 shadowCoord = TransformWorldToShadowCoord(posWS);
+    Light mainLight = GetMainLight(shadowCoord);
+
+#if defined(_MIXED_LIGHTING_SUBTRACTIVE)
+    mainLight.distanceAttenuation = lerp(GetMainLightShadowStrength(), 1, saturate(mainLight.distanceAttenuation));
+#endif
+
+    color.rgb *= mainLight.color * mainLight.distanceAttenuation * mainLight.shadowAttenuation;
+
     return color;
 }
