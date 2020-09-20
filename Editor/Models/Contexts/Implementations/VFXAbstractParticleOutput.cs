@@ -99,6 +99,10 @@ namespace UnityEditor.VFX
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("When enabled, particles will receive shadows.")]
         protected bool receiveShadows = false;
 
+        // MyVFX
+        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Check stencil with drawing for water.")]
+        protected bool checkStencil = true;
+
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("When enabled, an exposure weight slider appears in the current output. The slider can be used to control how much influence exposure control will have on the particles.")]
         protected bool useExposureWeight = false;
 
@@ -109,6 +113,9 @@ namespace UnityEditor.VFX
 
         // MyVFX
         public virtual bool hasShadowReceiving { get { return receiveShadows; } }
+
+        // MyVFX
+        public virtual bool hasStencil { get { return checkStencil; }}
 
         protected virtual bool needsExposureWeight { get { return true; } }
 
@@ -364,6 +371,10 @@ namespace UnityEditor.VFX
                     yield return "USE_RECEIVE_SHADOWS";
                 
                 // MyVFX
+                if (hasStencil)
+                    yield return "USE_CAST_STENCIL_PASS";
+
+                // MyVFX
                 yield return "VFX_NEEDS_POSWS_INTERPOLATOR";
             }
         }
@@ -410,6 +421,16 @@ namespace UnityEditor.VFX
                 foreach (var additionnalStencilReplacement in subOutput.GetStencilStateOverridesStr())
                 {
                     yield return additionnalStencilReplacement;
+                }
+                
+                // MyVFX
+                if (this.hasStencil)
+                {   
+                    var st = new VFXShaderWriter();
+                    string code = "Stencil {\nRef 0\nComp greater\nPass keep\n}";
+                    st.Write(code);
+
+                    yield return new KeyValuePair<string, VFXShaderWriter>("${VFXPostProcessStencil}", st);
                 }
             }
         }
