@@ -113,6 +113,10 @@ namespace UnityEditor.VFX
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Check stencil with drawing for water.")]
         protected bool checkStencil = true;
 
+        // MyVFX
+        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Render queue's offset.")]
+        protected int queueOffset = 0;
+
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("When enabled, an exposure weight slider appears in the current output. The slider can be used to control how much influence exposure control will have on the particles.")]
         protected bool useExposureWeight = false;
 
@@ -458,6 +462,15 @@ namespace UnityEditor.VFX
 
                 var shaderTags = new VFXShaderWriter();
                 var renderQueueStr = subOutput.GetRenderQueueStr();
+
+                // MyVFX
+                if (queueOffset > 0) {
+                    renderQueueStr = renderQueueStr + "+" + queueOffset;
+                }
+                else if (queueOffset < 0) {
+                    renderQueueStr += queueOffset;
+                }
+
                 var renderTypeStr = isBlendModeOpaque ? "Opaque" : "Transparent";
                 shaderTags.Write(string.Format("Tags {{ \"Queue\"=\"{0}\" \"IgnoreProjector\"=\"{1}\" \"RenderType\"=\"{2}\" }}", renderQueueStr, !isBlendModeOpaque, renderTypeStr));
                 yield return new KeyValuePair<string, VFXShaderWriter>("${VFXShaderTags}", shaderTags);
