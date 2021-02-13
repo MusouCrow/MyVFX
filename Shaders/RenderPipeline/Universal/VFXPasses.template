@@ -4,6 +4,9 @@ ${VFXBegin:VFXPassVelocity}"MotionVectors"${VFXEnd}
 ${VFXBegin:VFXPassDepth}"DepthOnly"${VFXEnd}
 
 // MyVFX
+${VFXBegin:VFXPassPostProcess}"ParticlePost"${VFXEnd}
+
+// MyVFX
 ${VFXBegin:VFXPassForwardAdditionalPragma}
 #pragma multi_compile_fog
 #pragma multi_compile _ _MIXED_LIGHTING_SUBTRACTIVE
