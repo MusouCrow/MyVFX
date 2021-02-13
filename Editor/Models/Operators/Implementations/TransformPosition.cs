@@ -18,7 +18,7 @@ namespace UnityEditor.VFX.Operator
         public class OutputProperties
         {
             [Tooltip("Outputs the transformed position.")]
-            public Position pos;
+            public Position tPos;
         }
 
         override public string name { get { return "Transform (Position)"; } }

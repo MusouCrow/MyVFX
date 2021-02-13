@@ -21,21 +21,23 @@ namespace UnityEditor.VFX
             UpdateAndOutput = Update | Output
         }
 
-        public VFXBlockSubgraphContext():base(VFXContextType.None, VFXDataType.None, VFXDataType.None)
+        public VFXBlockSubgraphContext() : base(VFXContextType.None, VFXDataType.None, VFXDataType.None)
         {
         }
+
         protected override int inputFlowCount { get { return 0; } }
 
         public sealed override string name { get { return "Block Subgraph"; } }
 
         protected override IEnumerable<VFXPropertyWithValue> inputProperties
         {
-            get {
+            get
+            {
                 yield break;
             }
         }
 
-        [VFXSetting]
+        [VFXSetting, SerializeField]
         ContextType m_SuitableContexts = ContextType.InitAndUpdateAndOutput;
 
         public VFXContextType compatibleContextType

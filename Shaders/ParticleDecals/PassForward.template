@@ -8,5 +8,6 @@ Pass
 	HLSLPROGRAM
 	${VFXPassForwardDefine}
 	${VFXInclude("Shaders/ParticleDecals/Pass.template")}
+	
 	ENDHLSL
 }

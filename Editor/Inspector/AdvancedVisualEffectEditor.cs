@@ -165,14 +165,15 @@ namespace UnityEditor.VFX
             {
                 EditorGUILayout.PropertyField(m_VisualEffectAsset, Contents.assetPath);
 
-                GUI.enabled = !m_VisualEffectAsset.hasMultipleDifferentValues && m_VisualEffectAsset.objectReferenceValue != null && resource != null; // Enabled state will be kept for all content until the end of the inspectorGUI.
+                bool saveEnabled = GUI.enabled;
+                GUI.enabled = saveEnabled && !m_VisualEffectAsset.hasMultipleDifferentValues && m_VisualEffectAsset.objectReferenceValue != null && resource != null; // Enabled state will be kept for all content until the end of the inspectorGUI.
                 if (GUILayout.Button(Contents.openEditor, EditorStyles.miniButton, Styles.MiniButtonWidth))
                 {
                     VFXViewWindow window = EditorWindow.GetWindow<VFXViewWindow>();
                     var asset = m_VisualEffectAsset.objectReferenceValue as VisualEffectAsset;
                     window.LoadAsset(asset, targets.Length > 1 ? null : target as VisualEffect);
                 }
-                GUI.enabled = true;
+                GUI.enabled = saveEnabled;
             }
         }
 
@@ -281,7 +282,7 @@ namespace UnityEditor.VFX
 
         protected override void PropertyOverrideChanged()
         {
-            foreach(var context in m_ContextsPerComponent.Values.Select(t=>t.context))
+            foreach (var context in m_ContextsPerComponent.Values.Select(t => t.context))
             {
                 context.Unprepare();
             }
@@ -384,8 +385,7 @@ namespace UnityEditor.VFX
                 return VFXGizmoUtility.NullProperty<T>.defaultProperty;
             }
 
-
-            void AddNewValue(List<object> l, object o, SerializedProperty vfxField,string propertyPath,string[] memberPath,int depth)
+            void AddNewValue(List<object> l, object o, SerializedProperty vfxField, string propertyPath, string[] memberPath, int depth)
             {
                 vfxField.InsertArrayElementAtIndex(vfxField.arraySize);
                 var newEntry = vfxField.GetArrayElementAtIndex(vfxField.arraySize - 1);
@@ -394,7 +394,7 @@ namespace UnityEditor.VFX
                 var valueProperty = newEntry.FindPropertyRelative("m_Value");
 
                 VFXSlot slot = m_Parameter.outputSlots[0];
-                for(int i = 0; i < memberPath.Length&& i< depth; ++i)
+                for (int i = 0; i < memberPath.Length && i < depth; ++i)
                 {
                     slot = slot.children.First(t => t.name == memberPath[i]);
                 }
@@ -435,11 +435,11 @@ namespace UnityEditor.VFX
                         property = property.FindPropertyRelative("m_Value");
                         cmdList.Add((l, o) => overrideProperty.boolValue = true);
                     }
-                    else if( vfxField != null)
+                    else if (vfxField != null)
                     {
                         cmdList.Add((l, o) =>
                         {
-                            AddNewValue(l,o,vfxField,propertyPath, memberPath,depth);
+                            AddNewValue(l, o, vfxField, propertyPath, memberPath, depth);
                         });
 
                         if (depth < memberPath.Length)
@@ -694,7 +694,8 @@ namespace UnityEditor.VFX
                     Repaint();
                 }
 
-                GUI.enabled = m_GizmoedParameter != null;
+                bool saveEnabled = GUI.enabled;
+                GUI.enabled = saveEnabled && m_GizmoedParameter != null;
                 if (GUILayout.Button(VFXSlotContainerEditor.Contents.gizmoFrame, VFXSlotContainerEditor.Styles.frameButtonStyle, GUILayout.Width(19), GUILayout.Height(18)))
                 {
                     if (m_GizmoDisplayed && m_GizmoedParameter != null)
@@ -708,7 +709,7 @@ namespace UnityEditor.VFX
                         sceneView.Frame(bounds, false);
                     }
                 }
-                GUI.enabled = true;
+                GUI.enabled = saveEnabled;
                 GUILayout.EndHorizontal();
             }
         }

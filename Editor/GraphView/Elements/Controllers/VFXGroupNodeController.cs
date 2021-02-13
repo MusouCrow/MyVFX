@@ -124,7 +124,7 @@ namespace UnityEditor.VFX.UI
 
         protected void Modified()
         {
-            m_UI.Modified();
+            m_UI.Modified(true);
             m_ViewController.IncremenentGraphUndoRedoState(null, VFXModel.InvalidationCause.kUIChanged);
         }
 
@@ -234,7 +234,7 @@ namespace UnityEditor.VFX.UI
                 m_UI.groupInfos[m_Index].contents = m_UI.groupInfos[m_Index].contents.Where(t => t.model != model || t.id != id).ToArray();
                 oneFound = true;
             }
-            if(oneFound)
+            if (oneFound)
                 Modified();
         }
 

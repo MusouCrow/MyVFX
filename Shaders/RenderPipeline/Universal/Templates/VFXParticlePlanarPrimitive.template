@@ -5,10 +5,8 @@
 		
 		${VFXInclude("Shaders/VFXParticleHeader.template")}
 		${VFXInclude("Shaders/ParticlePlanarPrimitives/PassSelection.template")}
+		${VFXInclude("Shaders/ParticlePlanarPrimitives/PassDepth.template"),IS_OPAQUE_PARTICLE}
 		${VFXInclude("Shaders/ParticlePlanarPrimitives/PassForward.template")}
 		${VFXInclude("Shaders/ParticlePlanarPrimitives/PassShadowCaster.template"),USE_CAST_SHADOWS_PASS}
-
-		// MyVFX
-		${VFXInclude("Shaders/ParticlePlanarPrimitives/PassPostProcess.template"),USE_CAST_STENCIL_PASS}
 	}
 }

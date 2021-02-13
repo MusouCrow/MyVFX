@@ -52,15 +52,15 @@ namespace UnityEditor.VFX
 
         private static readonly KeyValuePair<DelaySettings, DisplayedDelaySettings>[] s_Modes =
         {
-            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.None,      delayAfterLoop = VFXBasicSpawner.DelayMode.None     }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.None,                randomBefore = null,  randomAfter = null  } ),
-            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.None,      delayAfterLoop = VFXBasicSpawner.DelayMode.Constant }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.AfterLoop,           randomBefore = null,  randomAfter = false } ),
-            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.None,      delayAfterLoop = VFXBasicSpawner.DelayMode.Random   }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.AfterLoop,           randomBefore = null,  randomAfter = true  } ),
-            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Constant,  delayAfterLoop = VFXBasicSpawner.DelayMode.None     }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeLoop,          randomBefore = false, randomAfter = null  } ),
-            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Constant,  delayAfterLoop = VFXBasicSpawner.DelayMode.Constant }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeAndAfterLoop,  randomBefore = false, randomAfter = false } ),
-            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Constant,  delayAfterLoop = VFXBasicSpawner.DelayMode.Random   }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeAndAfterLoop,  randomBefore = false, randomAfter = true  } ),
-            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Random,    delayAfterLoop = VFXBasicSpawner.DelayMode.None     }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeLoop,          randomBefore = true,  randomAfter = null  } ),
-            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Random,    delayAfterLoop = VFXBasicSpawner.DelayMode.Constant }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeAndAfterLoop,  randomBefore = true,  randomAfter = false } ),
-            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Random,    delayAfterLoop = VFXBasicSpawner.DelayMode.Random   }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeAndAfterLoop,  randomBefore = true,  randomAfter = true  } ),
+            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.None,      delayAfterLoop = VFXBasicSpawner.DelayMode.None     }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.None,                randomBefore = null,  randomAfter = null  }),
+            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.None,      delayAfterLoop = VFXBasicSpawner.DelayMode.Constant }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.AfterLoop,           randomBefore = null,  randomAfter = false }),
+            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.None,      delayAfterLoop = VFXBasicSpawner.DelayMode.Random   }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.AfterLoop,           randomBefore = null,  randomAfter = true  }),
+            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Constant,  delayAfterLoop = VFXBasicSpawner.DelayMode.None     }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeLoop,          randomBefore = false, randomAfter = null  }),
+            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Constant,  delayAfterLoop = VFXBasicSpawner.DelayMode.Constant }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeAndAfterLoop,  randomBefore = false, randomAfter = false }),
+            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Constant,  delayAfterLoop = VFXBasicSpawner.DelayMode.Random   }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeAndAfterLoop,  randomBefore = false, randomAfter = true  }),
+            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Random,    delayAfterLoop = VFXBasicSpawner.DelayMode.None     }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeLoop,          randomBefore = true,  randomAfter = null  }),
+            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Random,    delayAfterLoop = VFXBasicSpawner.DelayMode.Constant }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeAndAfterLoop,  randomBefore = true,  randomAfter = false }),
+            new KeyValuePair<DelaySettings, DisplayedDelaySettings>(new DelaySettings(){ delayBeforeLoop = VFXBasicSpawner.DelayMode.Random,    delayAfterLoop = VFXBasicSpawner.DelayMode.Random   }, new DisplayedDelaySettings() { mode = DisplayedDelayMode.BeforeAndAfterLoop,  randomBefore = true,  randomAfter = true  }),
         };
 
         struct RandomAvailable
@@ -93,7 +93,6 @@ namespace UnityEditor.VFX
                 EditorGUILayout.PropertyField(m_DelayBeforeLoopProperty);
                 EditorGUILayout.PropertyField(m_DelayAfterLoopProperty);
                 applyModifiedProperty = EditorGUI.EndChangeCheck();
-
             }
             else
             {
@@ -131,7 +130,7 @@ namespace UnityEditor.VFX
                         currentState.randomAfter = false;
 
                     var actualSetting = s_Modes.First(o =>
-                            o.Value.mode == currentState.mode
+                        o.Value.mode == currentState.mode
                         && (o.Value.randomBefore == currentState.randomBefore)
                         && (o.Value.randomAfter == currentState.randomAfter)).Key;
 
@@ -224,9 +223,9 @@ namespace UnityEditor.VFX
             }
         }
 
-        static VFXExpression RandomFromVector2(VFXExpression input)
+        static VFXExpression RandomFromVector2(VFXExpression input, RandId randId)
         {
-            return VFXOperatorUtility.Lerp(input.x, input.y, new VFXExpressionRandom());
+            return VFXOperatorUtility.Lerp(input.x, input.y, new VFXExpressionRandom(false, randId));
         }
 
         public override VFXExpressionMapper GetExpressionMapper(VFXDeviceTarget target)
@@ -242,7 +241,7 @@ namespace UnityEditor.VFX
                 {
                     var expression = mapperFromContext.FromNameAndId("LoopDuration", -1);
                     if (loopDuration == LoopMode.Random)
-                        expression = RandomFromVector2(expression);
+                        expression = RandomFromVector2(expression, new RandId(this, 0));
                     mapper.AddExpression(expression, "LoopDuration", -1);
                 }
 
@@ -250,7 +249,7 @@ namespace UnityEditor.VFX
                 {
                     var expression = mapperFromContext.FromNameAndId("LoopCount", -1);
                     if (loopCount == LoopMode.Random)
-                        expression = new VFXExpressionCastFloatToInt(RandomFromVector2(expression));
+                        expression = new VFXExpressionCastFloatToInt(RandomFromVector2(expression, new RandId(this, 1)));
                     mapper.AddExpression(expression, "LoopCount", -1);
                 }
 
@@ -258,7 +257,7 @@ namespace UnityEditor.VFX
                 {
                     var expression = mapperFromContext.FromNameAndId("DelayBeforeLoop", -1);
                     if (delayBeforeLoop == DelayMode.Random)
-                        expression = RandomFromVector2(expression);
+                        expression = RandomFromVector2(expression, new RandId(this, 2));
                     mapper.AddExpression(expression, "DelayBeforeLoop", -1);
                 }
 
@@ -266,7 +265,7 @@ namespace UnityEditor.VFX
                 {
                     var expression = mapperFromContext.FromNameAndId("DelayAfterLoop", -1);
                     if (delayAfterLoop == DelayMode.Random)
-                        expression = RandomFromVector2(expression);
+                        expression = RandomFromVector2(expression, new RandId(this, 3));
                     mapper.AddExpression(expression, "DelayAfterLoop", -1);
                 }
                 return mapper;

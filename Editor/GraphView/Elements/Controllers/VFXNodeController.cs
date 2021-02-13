@@ -35,7 +35,7 @@ namespace UnityEditor.VFX.UI
             foreach (var setting in settings)
             {
                 var settingController = new VFXSettingController();
-                settingController.Init(this.slotContainer, setting.field.Name, setting.field.FieldType);
+                settingController.Init(viewController,this.slotContainer, setting.field.Name, setting.field.FieldType);
                 m_Settings[cpt++] = settingController;
             }
         }
@@ -166,7 +166,7 @@ namespace UnityEditor.VFX.UI
 
             foreach (var edge in inputEdges)
             {
-                edge.output.sourceNode.OnEdgeFromOutputGoingToBeRemoved(edge.output,edge.input);
+                edge.output.sourceNode.OnEdgeFromOutputGoingToBeRemoved(edge.output, edge.input);
             }
         }
 
@@ -174,7 +174,7 @@ namespace UnityEditor.VFX.UI
         {
         }
 
-        public virtual void OnEdgeFromOutputGoingToBeRemoved(VFXDataAnchorController myOutput,VFXDataAnchorController otherInput)
+        public virtual void OnEdgeFromOutputGoingToBeRemoved(VFXDataAnchorController myOutput, VFXDataAnchorController otherInput)
         {
         }
 

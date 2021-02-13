@@ -35,7 +35,7 @@ namespace UnityEditor.VFX
 
         static void SetVisibility(bool visible)
         {
-            if(visible != s_Visible)
+            if (visible != s_Visible)
             {
                 s_Visible = visible;
                 EditorPrefs.SetBool(PreferenceName, visible);
@@ -115,7 +115,6 @@ namespace UnityEditor.VFX
             m_Attributes.Add(new EventAttribute(name as string, EventAttributeType.Color, Color.white));
         }
 
-
         static void DrawWindow(SceneView sceneView)
         {
             if (Selection.activeGameObject != null)
@@ -194,11 +193,11 @@ namespace UnityEditor.VFX
 
             var typerect = rect;
             typerect.xMin = rect.xMin + 108;
-            typerect.width = 64;
+            typerect.width = 76;
             m_Attributes[index].type = (EventAttributeType)EditorGUI.EnumPopup(typerect, m_Attributes[index].type);
 
             var valueRect = rect;
-            valueRect.xMin = rect.xMin + 180;
+            valueRect.xMin = rect.xMin + 192;
             switch (m_Attributes[index].type)
             {
                 case EventAttributeType.Bool:
@@ -234,6 +233,10 @@ namespace UnityEditor.VFX
                         m_Attributes[index].value = Color.white;
 
                     m_Attributes[index].value = (Color)EditorGUI.ColorField(valueRect, (Color)m_Attributes[index].value);
+                    // The is a hotControl id hash collision with the selection rectangle that cause of a lost of selection on mouseup.
+                    if(Event.current.type == EventType.MouseUp && valueRect.Contains(Event.current.mousePosition) )
+                        GUIUtility.hotControl = 0;
+
                     break;
             }
         }
@@ -267,6 +270,7 @@ namespace UnityEditor.VFX
         {
             if (m_Effect == null) return;
             var attrib = m_Effect.CreateVFXEventAttribute();
+            if (attrib == null) return;
 
             // set all attributes
             foreach (var attribute in m_Attributes)
@@ -289,7 +293,6 @@ namespace UnityEditor.VFX
                 m_Effect.Stop(attrib);
             else
                 m_Effect.SendEvent(name, attrib);
-
         }
 
         static class Contents
@@ -313,8 +316,5 @@ namespace UnityEditor.VFX
                 rightButton.fontSize = 12;
             }
         }
-
     }
-
 }
-

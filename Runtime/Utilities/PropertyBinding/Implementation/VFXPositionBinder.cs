@@ -4,7 +4,7 @@ namespace UnityEngine.VFX.Utility
 {
     [AddComponentMenu("VFX/Property Binders/Position Binder")]
     [VFXBinder("Transform/Position")]
-    public class VFXPositionBinder : VFXBinderBase
+    class VFXPositionBinder : VFXBinderBase
     {
         public string Property { get { return (string)m_Property; } set { m_Property = value; } }
 

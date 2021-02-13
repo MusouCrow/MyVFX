@@ -18,7 +18,7 @@ namespace UnityEditor.VFX.Operator
         public class OutputProperties
         {
             [Tooltip("Outputs the transformed normalized vector.")]
-            public DirectionType dir;
+            public DirectionType tDir;
         }
 
         public override void Sanitize(int version)

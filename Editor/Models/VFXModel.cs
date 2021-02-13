@@ -11,16 +11,29 @@ namespace UnityEditor.VFX
 {
     class VFXObject : ScriptableObject
     {
-        public Action<VFXObject> onModified;
-        void OnValidate()
+        //Explicitly disable the Reset option on all VFXObject
+        //Internal Reset() behavior leads to a dandling state in graph object
+        [MenuItem("CONTEXT/VFXObject/Reset", false)]
+        public static void DummyReset()
         {
-            Modified();
         }
 
-        public void Modified()
+        [MenuItem("CONTEXT/VFXObject/Reset", true)]
+        static bool ValidateDummyReset()
+        {
+            return false;
+        }
+
+        public Action<VFXObject,bool> onModified;
+        void OnValidate()
+        {
+            Modified(false);
+        }
+
+        public void Modified(bool uiChange)
         {
             if (onModified != null)
-                onModified(this);
+                onModified(this,uiChange);
         }
     }
 
@@ -37,6 +50,7 @@ namespace UnityEditor.VFX
             kExpressionInvalidated, // No direct change to the model but a change in connection was propagated from the parents
             kExpressionGraphChanged,// Expression graph must be recomputed
             kUIChanged,             // UI stuff has changed
+            kUIChangedTransient,    // UI stuff has been changed be does not require serialization 
         }
 
         public new virtual string name  { get { return string.Empty; } }
@@ -65,8 +79,25 @@ namespace UnityEditor.VFX
 
         public virtual void Sanitize(int version) {}
 
+        public virtual void CheckGraphBeforeImport() {}
+
         public virtual void OnUnknownChange()
         {
+        }
+
+        public virtual void GetSourceDependentAssets(HashSet<string> dependencies)
+        {
+            foreach (var child in children)
+                child.GetSourceDependentAssets(dependencies);
+        }
+
+        public virtual void GetImportDependentAssets(HashSet<int> dependencies)
+        {
+            //var monoScript = MonoScript.FromScriptableObject(this);
+            //dependencies.Add(AssetDatabase.AssetPathToGUID(AssetDatabase.GetAssetPath(monoScript)));
+
+            foreach (var child in children)
+                child.GetImportDependentAssets(dependencies);
         }
 
         public virtual void CollectDependencies(HashSet<ScriptableObject> objs, bool ownedOnly = true)
@@ -86,10 +117,30 @@ namespace UnityEditor.VFX
                 try
                 {
                     onInvalidateDelegate(model, cause);
+
                 }
                 finally
                 {
                     Profiler.EndSample();
+                }
+            }
+        }
+
+        public void RefreshErrors(VFXGraph graph)
+        {
+            if (graph != null)
+            {
+                graph.errorManager.ClearAllErrors(this, VFXErrorOrigin.Invalidate);
+                using (var reporter = new VFXInvalidateErrorReporter(graph.errorManager, this))
+                {
+                    try
+                    {
+                        GenerateErrors(reporter);
+                    }
+                    catch(Exception e)
+                    {
+                        Debug.LogException(e);
+                    }
                 }
             }
         }
@@ -243,7 +294,7 @@ namespace UnityEditor.VFX
 
         public void SetSettingValue(string name, object value)
         {
-            SetSettingValue(name, value, true);         
+            SetSettingValue(name, value, true);
         }
 
         public void SetSettingValues(IEnumerable<KeyValuePair<string, object>> nameValues)
@@ -258,6 +309,7 @@ namespace UnityEditor.VFX
             if (hasChanged)
                 Invalidate(InvalidationCause.kSettingChanged);
         }
+
         protected void SetSettingValue(string name, object value, bool notify)
         {
             bool hasChanged = SetSettingValueAndReturnIfChanged(name, value);
@@ -287,7 +339,8 @@ namespace UnityEditor.VFX
 
         // Override this method to update other settings based on a setting modification
         // Use OnIvalidate with KSettingChanged and not this method to handle other side effects
-        protected virtual void OnSettingModified(VFXSetting setting) {}
+        public virtual void OnSettingModified(VFXSetting setting) { }
+        public virtual IEnumerable<int> GetFilteredOutEnumerators(string name) { return null; }
 
         public virtual VFXSetting GetSetting(string name)
         {
@@ -296,7 +349,10 @@ namespace UnityEditor.VFX
 
         public void Invalidate(InvalidationCause cause)
         {
-            Modified();
+            if (cause != InvalidationCause.kExpressionGraphChanged && cause != InvalidationCause.kExpressionInvalidated)
+                Modified(cause == InvalidationCause.kUIChanged || cause == InvalidationCause.kUIChangedTransient);
+
+
             string sampleName = GetType().Name + "-" + name + "-" + cause;
             Profiler.BeginSample("VFXEditor.Invalidate" + sampleName);
             try
@@ -307,6 +363,38 @@ namespace UnityEditor.VFX
             {
                 Profiler.EndSample();
             }
+        }
+
+        [SerializeField]
+        List<string> m_UIIgnoredErrors = new List<string>();
+
+
+        public void IgnoreError(string error)
+        {
+            if (m_UIIgnoredErrors == null)
+                m_UIIgnoredErrors = new List<string>();
+            if (!m_UIIgnoredErrors.Contains(error))
+                m_UIIgnoredErrors.Add(error);
+        }
+
+        public bool IsErrorIgnored(string error)
+        {
+            return m_UIIgnoredErrors != null && m_UIIgnoredErrors.Contains(error);
+        }
+
+        public void ClearIgnoredErrors()
+        {
+            m_UIIgnoredErrors = null;
+            RefreshErrors(GetGraph());
+        }
+
+        public bool HasIgnoredErrors()
+        {
+            return m_UIIgnoredErrors != null && m_UIIgnoredErrors.Count > 0;
+        }
+
+        protected virtual void GenerateErrors(VFXInvalidateErrorReporter manager)
+        {
         }
 
         protected internal virtual void Invalidate(VFXModel model, InvalidationCause cause)
@@ -330,7 +418,7 @@ namespace UnityEditor.VFX
                     return (attr.visibleFlags & flags) != 0 && !filteredOutSettings.Contains(f.Name);
                 }
                 return false;
-            }).Select(field => new VFXSetting(field,this));
+            }).Select(field => new VFXSetting(field, this));
         }
 
         static public VFXExpression ConvertSpace(VFXExpression input, VFXSlot targetSlot, VFXCoordinateSpace space)
@@ -431,7 +519,7 @@ namespace UnityEditor.VFX
         public static void RemoveModel(VFXModel model, bool notify = true)
         {
             VFXGraph graph = model.GetGraph();
-            if (graph != null)        
+            if (graph != null)
                 graph.UIInfos.Sanitize(graph); // Remove reference from groupInfos
             UnlinkModel(model);
             model.Detach(notify);

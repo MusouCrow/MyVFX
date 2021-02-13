@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
@@ -5,7 +6,21 @@ using UnityEngine.VFX;
 
 namespace UnityEditor.VFX
 {
-    [VFXInfo]
+    class InitializeVariantProvider : VariantProvider
+    {
+        protected override sealed Dictionary<string, object[]> variants
+        {
+            get
+            {
+                return new Dictionary<string, object[]>
+                {
+                    { "dataType", Enum.GetValues(typeof(VFXDataParticle.DataType)).Cast<object>().ToArray() }
+                };
+            }
+        }
+    }
+
+    [VFXInfo(variantProvider = typeof(InitializeVariantProvider))]
     class VFXBasicInitialize : VFXContext
     {
         public VFXBasicInitialize() : base(VFXContextType.Init, VFXDataType.SpawnEvent, VFXDataType.None) {}
@@ -18,7 +33,7 @@ namespace UnityEditor.VFX
 
         private bool hasGPUSpawner => inputContexts.Any(o => o.contextType == VFXContextType.SpawnerGPU);
 
-    public override IEnumerable<string> additionalDefines
+        public override IEnumerable<string> additionalDefines
         {
             get
             {
@@ -47,6 +62,14 @@ namespace UnityEditor.VFX
                 ResyncSlots(false); // To add/remove stripIndex
 
             base.OnInvalidate(model, cause);
+        }
+
+
+        protected override void GenerateErrors(VFXInvalidateErrorReporter manager)
+        {
+            VFXSetting capacitySetting = GetSetting("capacity");
+            if ((uint)capacitySetting.value > 1000000)
+                manager.RegisterError("CapacityOver1M",VFXErrorType.PerfWarning, "Systems with large capacities can be slow to simulate");
         }
 
         protected override IEnumerable<VFXPropertyWithValue> inputProperties
@@ -80,7 +103,7 @@ namespace UnityEditor.VFX
 
             // CPU
             var cpuMapper = new VFXExpressionMapper();
-            cpuMapper.AddExpressionsFromSlot(inputSlots[0], -1); // bounds   
+            cpuMapper.AddExpressionsFromSlot(inputSlots[0], -1); // bounds
             return cpuMapper;
         }
 
@@ -93,6 +116,5 @@ namespace UnityEditor.VFX
         {
             return GetData().GetSettings(listHidden, flags); // Just a bridge on data
         }
-
     }
 }

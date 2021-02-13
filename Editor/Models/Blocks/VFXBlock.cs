@@ -64,15 +64,15 @@ namespace UnityEditor.VFX
         {
             get
             {
-                 var attribs = new Dictionary< VFXAttribute, VFXAttributeMode >();
-                 foreach (var a in attributes)
-                 {
-                     VFXAttributeMode mode = VFXAttributeMode.None;
-                     attribs.TryGetValue(a.attrib, out mode);
-                     mode |= a.mode;
-                     attribs[a.attrib] = mode;
-                 }
-                 return attribs.Select(kvp => new VFXAttributeInfo(kvp.Key,kvp.Value));
+                var attribs = new Dictionary<VFXAttribute, VFXAttributeMode>();
+                foreach (var a in attributes)
+                {
+                    VFXAttributeMode mode = VFXAttributeMode.None;
+                    attribs.TryGetValue(a.attrib, out mode);
+                    mode |= a.mode;
+                    attribs[a.attrib] = mode;
+                }
+                return attribs.Select(kvp => new VFXAttributeInfo(kvp.Key, kvp.Value));
             }
         }
 
@@ -90,5 +90,19 @@ namespace UnityEditor.VFX
                 return GetParent().space;
             return (VFXCoordinateSpace)int.MaxValue;
         }
+
+        public VFXContext flattenedParent
+        {
+            get
+            {
+                return m_FlattenedParent != null ? m_FlattenedParent : GetParent();
+            }
+            set
+            {
+                m_FlattenedParent = value;
+            }
+        }
+
+        private VFXContext m_FlattenedParent;
     }
 }

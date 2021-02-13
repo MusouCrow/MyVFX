@@ -14,7 +14,7 @@ namespace UnityEditor.VFX.UI
         {
             var anchor = new VFXOutputParameterDataAnchor(controller.orientation, controller.direction, controller.portType, node);
 
-            anchor.m_EdgeConnector = new EdgeConnector<VFXDataEdge>(anchor);
+            anchor.m_EdgeConnector = new VFXEdgeConnector(anchor);
             anchor.controller = controller;
             anchor.AddManipulator(anchor.m_EdgeConnector);
             return anchor;
@@ -134,7 +134,7 @@ namespace UnityEditor.VFX.UI
 
         public override VFXDataAnchor InstantiateDataAnchor(VFXDataAnchorController controller, VFXNodeUI node)
         {
-            if(controller.direction == Direction.Input)
+            if (controller.direction == Direction.Input)
                 return VFXInputParameterDataAnchor.Create(controller, node);
             else
                 return VFXOutputParameterDataAnchor.Create(controller, node);
