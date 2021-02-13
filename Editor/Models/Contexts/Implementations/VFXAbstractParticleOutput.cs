@@ -65,6 +65,10 @@ namespace UnityEditor.VFX
             Custom,
         }
 
+        // MyVFX
+        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Specifies render tag.")]
+        protected string renderTag = "UniversalForward";
+
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Specifies how the particle geometry is culled. This can be used to hide the front or back facing sides or make the mesh double-sided.")]
         protected CullMode cullMode = CullMode.Default;
 
@@ -461,6 +465,14 @@ namespace UnityEditor.VFX
                 foreach (var additionnalStencilReplacement in subOutput.GetStencilStateOverridesStr())
                 {
                     yield return additionnalStencilReplacement;
+                }
+
+                // MyVFX
+                {
+                    var st = new VFXShaderWriter();
+                    st.Write('"' + this.renderTag + '"');
+
+                    yield return new KeyValuePair<string, VFXShaderWriter>("${VFXPassForward}", st);
                 }
                 
                 // MyVFX
