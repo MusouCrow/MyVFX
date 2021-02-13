@@ -147,3 +147,17 @@ float4 VFXApplyFog(float4 color,VFX_VARYING_PS_INPUTS i)
         return color;
     #endif
 }
+
+// MyVFX
+float4 VFXApplyShadow(float4 color,VFX_VARYING_PS_INPUTS i)
+{
+    #if USE_RECEIVE_SHADOWS
+        #if defined(VFX_VARYING_POSWS)
+            return VFXApplyShadow(color, i.VFX_VARYING_POSWS);
+        #else
+            return VFXApplyShadow(color, (float3)0); //Some pipeline (LWRP) doesn't require WorldPos
+        #endif
+    #else
+        return color;
+    #endif
+}

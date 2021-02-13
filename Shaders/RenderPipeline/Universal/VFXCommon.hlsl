@@ -4,6 +4,9 @@
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
 #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
+// MyVFX
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
+
 float3 _LightDirection;
 
 #ifdef VFX_VARYING_PS_INPUTS
@@ -140,4 +143,18 @@ float4 VFXApplyFog(float4 color,float4 posCS,float3 posWS)
    color.rgb = lerp(fog.rgb * color.a, color.rgb, fog.a);
 #endif
    return color;
+}
+
+// MyVFX
+float4 VFXApplyShadow(float4 color, float3 posWS) {
+    float4 shadowCoord = TransformWorldToShadowCoord(posWS);
+    Light mainLight = GetMainLight(shadowCoord);
+
+#ifdef CALCULATE_BAKED_SHADOWS
+    mainLight.distanceAttenuation = lerp(GetMainLightShadowStrength(), 1, saturate(mainLight.distanceAttenuation));
+#endif
+
+    color.rgb *= mainLight.color * mainLight.distanceAttenuation * mainLight.shadowAttenuation;
+
+    return color;
 }

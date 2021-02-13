@@ -92,6 +92,10 @@ Pass
 		o.color = VFXGetFragmentColor(i);
 		
 		o.color *= VFXGetTextureColorWithProceduralUV(VFX_SAMPLER(mainTexture),i,VFXCubeGetUV(i));
+
+		// MyVFX
+		o.color = VFXApplyShadow(o.color, i);
+
 		o.color = VFXApplyFog(o.color,i);
 		VFXClipFragmentColor(o.color.a,i);
 
