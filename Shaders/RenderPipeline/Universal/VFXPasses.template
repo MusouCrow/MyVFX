@@ -8,8 +8,8 @@ ${VFXBegin:VFXPassPostProcess}"ParticlePost"${VFXEnd}
 // MyVFX
 ${VFXBegin:VFXPassForwardAdditionalPragma}
 #pragma multi_compile_fog
-#pragma multi_compile _ _MIXED_LIGHTING_SUBTRACTIVE
-#pragma multi_compile _ _MAIN_LIGHT_SHADOWS
+// #pragma multi_compile _ _MIXED_LIGHTING_SUBTRACTIVE
+// #pragma multi_compile _ _MAIN_LIGHT_SHADOWS
 ${VFXEnd}
 
 ${VFXBegin:VFXShaderGraphFunctionsInclude}

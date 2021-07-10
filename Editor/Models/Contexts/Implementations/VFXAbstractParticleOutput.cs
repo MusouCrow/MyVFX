@@ -111,7 +111,7 @@ namespace UnityEditor.VFX
 
         // MyVFX
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Check stencil with drawing for water.")]
-        protected bool checkStencil = true;
+        protected bool checkStencil = false;
 
         // MyVFX
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Render queue's offset.")]
