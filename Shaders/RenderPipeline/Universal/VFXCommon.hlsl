@@ -149,11 +149,12 @@ float4 VFXApplyFog(float4 color,float4 posCS,float3 posWS)
 float4 VFXApplyShadow(float4 color, float3 posWS) {
     float4 shadowCoord = TransformWorldToShadowCoord(posWS);
     Light mainLight = GetMainLight(shadowCoord);
-
+/*
 #ifdef CALCULATE_BAKED_SHADOWS
     mainLight.distanceAttenuation = lerp(GetMainLightShadowStrength(), 1, saturate(mainLight.distanceAttenuation));
 #endif
-
+*/
+    mainLight.distanceAttenuation = max(0.5, mainLight.distanceAttenuation);
     color.rgb *= mainLight.color * mainLight.distanceAttenuation * mainLight.shadowAttenuation;
 
     return color;
