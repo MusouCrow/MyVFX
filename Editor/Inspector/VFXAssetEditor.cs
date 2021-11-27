@@ -6,7 +6,6 @@ using UnityEditorInternal;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.VFX;
-using UnityEngine.Rendering;
 using UnityEditor.Callbacks;
 using UnityEditor.VFX;
 using UnityEditor.VFX.UI;
@@ -90,6 +89,21 @@ class VFXExternalShaderProcessor : AssetPostprocessor
 [CanEditMultipleObjects]
 class VisualEffectAssetEditor : Editor
 {
+#if UNITY_2021_1_OR_NEWER
+    [OnOpenAsset(OnOpenAssetAttributeMode.Validate)]
+    public static bool WillOpenInUnity(int instanceID)
+    {
+        var obj = EditorUtility.InstanceIDToObject(instanceID);
+        if (obj is VFXGraph || obj is VFXModel || obj is VFXUI)
+            return true;
+        else if (obj is VisualEffectAsset)
+            return true;
+        else if (obj is VisualEffectSubgraph)
+            return true;
+        return false;
+    }
+
+#endif
     [OnOpenAsset(1)]
     public static bool OnOpenVFX(int instanceID, int line)
     {
@@ -113,7 +127,7 @@ class VisualEffectAssetEditor : Editor
             VFXViewWindow.GetWindow<VFXViewWindow>().LoadResource(resource, null);
             return true;
         }
-        else if (obj is Shader || obj is ComputeShader)
+        else if (obj is Material || obj is ComputeShader)
         {
             string path = AssetDatabase.GetAssetPath(instanceID);
 
@@ -139,7 +153,7 @@ class VisualEffectAssetEditor : Editor
     {
         for (int i = 0; i < m_OutputContexts.Count(); ++i)
         {
-            m_OutputContexts[i].sortPriority = i;
+            m_OutputContexts[i].vfxSystemSortPriority = i;
         }
     }
 
@@ -170,7 +184,7 @@ class VisualEffectAssetEditor : Editor
         {
             m_CurrentGraph = resource.GetOrCreateGraph();
             m_CurrentGraph.systemNames.Sync(m_CurrentGraph);
-            m_OutputContexts.AddRange(m_CurrentGraph.children.OfType<IVFXSubRenderer>().OrderBy(t => t.sortPriority));
+            m_OutputContexts.AddRange(m_CurrentGraph.children.OfType<IVFXSubRenderer>().OrderBy(t => t.vfxSystemSortPriority));
         }
 
         m_ReorderableList = new ReorderableList(m_OutputContexts, typeof(IVFXSubRenderer));
@@ -417,19 +431,19 @@ class VisualEffectAssetEditor : Editor
         VFXUpdateMode initialUpdateMode = (VFXUpdateMode)0;
         bool? initialFixedDeltaTime = null;
         bool? initialProcessEveryFrame = null;
-        bool? initialIgnoreGameTimeScale= null;
+        bool? initialIgnoreGameTimeScale = null;
         if (resourceUpdateModeProperty.hasMultipleDifferentValues)
         {
             var resourceUpdateModeProperties = resourceUpdateModeProperty.serializedObject.targetObjects
-                                                .Select(o => new SerializedObject(o)
-                                                .FindProperty(resourceUpdateModeProperty.propertyPath))
-                                                .ToArray(); //N.B.: This will create garbage
-            var allDeltaTime = resourceUpdateModeProperties .Select(o => ((VFXUpdateMode)o.intValue & VFXUpdateMode.DeltaTime) == VFXUpdateMode.DeltaTime)
-                                                            .Distinct();
-            var allProcessEveryFrame = resourceUpdateModeProperties .Select(o => ((VFXUpdateMode)o.intValue & VFXUpdateMode.ExactFixedTimeStep) == VFXUpdateMode.ExactFixedTimeStep)
-                                                                    .Distinct();
+                .Select(o => new SerializedObject(o)
+                    .FindProperty(resourceUpdateModeProperty.propertyPath))
+                .ToArray();                                 //N.B.: This will create garbage
+            var allDeltaTime = resourceUpdateModeProperties.Select(o => ((VFXUpdateMode)o.intValue & VFXUpdateMode.DeltaTime) == VFXUpdateMode.DeltaTime)
+                .Distinct();
+            var allProcessEveryFrame = resourceUpdateModeProperties.Select(o => ((VFXUpdateMode)o.intValue & VFXUpdateMode.ExactFixedTimeStep) == VFXUpdateMode.ExactFixedTimeStep)
+                .Distinct();
             var allIgnoreScale = resourceUpdateModeProperties.Select(o => ((VFXUpdateMode)o.intValue & VFXUpdateMode.IgnoreTimeScale) == VFXUpdateMode.IgnoreTimeScale)
-                                                             .Distinct();
+                .Distinct();
             if (allDeltaTime.Count() == 1)
                 initialFixedDeltaTime = !allDeltaTime.First();
             if (allProcessEveryFrame.Count() == 1)
@@ -444,7 +458,7 @@ class VisualEffectAssetEditor : Editor
             initialProcessEveryFrame = (initialUpdateMode & VFXUpdateMode.ExactFixedTimeStep) == VFXUpdateMode.ExactFixedTimeStep;
             initialIgnoreGameTimeScale = (initialUpdateMode & VFXUpdateMode.IgnoreTimeScale) == VFXUpdateMode.IgnoreTimeScale;
         }
-        
+
         EditorGUI.showMixedValue = !initialFixedDeltaTime.HasValue;
         var deltaTimeContent = EditorGUIUtility.TrTextContent("Fixed Delta Time", "If enabled, use visual effect manager fixed delta time mode, otherwise, use the default Time.deltaTime.");
         var processEveryFrameContent = EditorGUIUtility.TrTextContent("Exact Fixed Time", "Only relevant when using Fixed Delta Time. When enabled, several updates can be processed per frame (e.g.: if a frame is 10ms and the fixed frame rate is set to 5 ms, the effect will update twice with a 5ms deltaTime instead of once with a 10ms deltaTime). This method is expensive and should only be used for high-end scenarios.");
@@ -457,11 +471,7 @@ class VisualEffectAssetEditor : Editor
         bool newExactFixedTimeStep = false;
         EditorGUI.showMixedValue = !initialProcessEveryFrame.HasValue;
         EditorGUI.BeginDisabledGroup((!initialFixedDeltaTime.HasValue || !initialFixedDeltaTime.Value) && !resourceUpdateModeProperty.hasMultipleDifferentValues);
-
-#if CASE_1289829_HAS_BEEN_FIXED
         newExactFixedTimeStep = EditorGUILayout.Toggle(processEveryFrameContent, initialProcessEveryFrame ?? false);
-#endif
-
         EditorGUI.EndDisabledGroup();
         EditorGUI.showMixedValue = !initialIgnoreGameTimeScale.HasValue;
         bool newIgnoreTimeScale = EditorGUILayout.Toggle(ignoreTimeScaleContent, initialIgnoreGameTimeScale ?? false);
@@ -505,7 +515,7 @@ class VisualEffectAssetEditor : Editor
                         updateMode = updateMode | VFXUpdateMode.ExactFixedTimeStep;
                     else if (initialProcessEveryFrame.HasValue)
                         updateMode = updateMode & ~VFXUpdateMode.ExactFixedTimeStep;
-                    
+
                     if (newIgnoreTimeScale)
                         updateMode = updateMode | VFXUpdateMode.IgnoreTimeScale;
                     else if (initialIgnoreGameTimeScale.HasValue)
@@ -637,30 +647,37 @@ class VisualEffectAssetEditor : Editor
             VisualEffectResource resource = asset.GetResource();
 
             m_OutputContexts.Clear();
-            m_OutputContexts.AddRange(resource.GetOrCreateGraph().children.OfType<IVFXSubRenderer>().OrderBy(t => t.sortPriority));
+            m_OutputContexts.AddRange(resource.GetOrCreateGraph().children.OfType<IVFXSubRenderer>().OrderBy(t => t.vfxSystemSortPriority));
 
             m_ReorderableList.DoLayoutList();
 
-            VisualEffectEditor.ShowHeader(EditorGUIUtility.TrTextContent("Shaders"),  false, false);
+            VisualEffectEditor.ShowHeader(EditorGUIUtility.TrTextContent("Shaders"), false, false);
 
             string assetPath = AssetDatabase.GetAssetPath(asset);
             UnityObject[] objects = AssetDatabase.LoadAllAssetsAtPath(assetPath);
             string directory = Path.GetDirectoryName(assetPath) + "/" + VFXExternalShaderProcessor.k_ShaderDirectory + "/" + asset.name + "/";
 
-            foreach (var shader in objects)
+            foreach (var obj in objects)
             {
-                if (shader is Shader || shader is ComputeShader)
+                if (obj is Material || obj is ComputeShader)
                 {
                     GUILayout.BeginHorizontal();
                     Rect r = GUILayoutUtility.GetRect(0, 18, GUILayout.ExpandWidth(true));
 
                     int buttonsWidth = VFXExternalShaderProcessor.allowExternalization ? 240 : 160;
 
+                    int index = resource.GetShaderIndex(obj);
+
+                    var shader = obj;
+                    if (obj is Material) // Retrieve the shader from the material
+                        shader = ((Material)(obj)).shader;
+                    if (shader == null)
+                        continue;
 
                     Rect labelR = r;
                     labelR.width -= buttonsWidth;
                     GUI.Label(labelR, shader.name);
-                    int index = resource.GetShaderIndex(shader);
+
                     if (index >= 0)
                     {
                         if (VFXExternalShaderProcessor.allowExternalization && index < resource.GetShaderSourceCount())
