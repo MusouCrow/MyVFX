@@ -84,6 +84,10 @@ namespace UnityEditor.VFX
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Specifies how the particle rendering is affected by the depth buffer. By default, particles render if they are closer to the camera than solid objects in the scene.")]
         protected ZTestMode zTestMode = ZTestMode.Default;
 
+        // MyVFX
+        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("")]
+        protected int stencil = 0;
+
         [VFXSetting, SerializeField, Tooltip("Specifies how particles are being colored in the pixel shader. They can either use the main texture, or their color and alpha can be remapped with a gradient based on the main texture values."), Header("Particle Options"), FormerlySerializedAs("colorMappingMode")]
         protected ColorMappingMode colorMapping;
 
@@ -588,6 +592,11 @@ namespace UnityEditor.VFX
                     case CullMode.Front: rs.WriteLine("Cull Front"); break;
                     case CullMode.Back: rs.WriteLine("Cull Back"); break;
                     case CullMode.Off: rs.WriteLine("Cull Off"); break;
+                }
+
+                // MyVFX
+                if (this.stencil > 0) {
+                    rs.WriteLine("Stencil { Ref " + this.stencil + " Comp Equal Pass Zero Fail Keep ZFail Keep}");
                 }
 
                 return rs;
