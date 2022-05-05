@@ -71,6 +71,10 @@ namespace UnityEditor.VFX
             Texture2DArray
         }
 
+        // MyVFX
+        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Specifies render tag.")]
+        protected string renderTag = "UniversalForwardOnly";
+
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Specifies how the particle geometry is culled. This can be used to hide the front or back facing sides or make the mesh double-sided.")]
         protected CullMode cullMode = CullMode.Default;
 
@@ -79,6 +83,10 @@ namespace UnityEditor.VFX
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Specifies how the particle rendering is affected by the depth buffer. By default, particles render if they are closer to the camera than solid objects in the scene.")]
         protected ZTestMode zTestMode = ZTestMode.Default;
+
+        // MyVFX
+        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("")]
+        protected int stencil = 0;
 
         [VFXSetting, SerializeField, Tooltip("Specifies how particles are being colored in the pixel shader. They can either use the main texture, or their color and alpha can be remapped with a gradient based on the main texture values."), Header("Particle Options"), FormerlySerializedAs("colorMappingMode")]
         protected ColorMappingMode colorMapping;
@@ -106,6 +114,10 @@ namespace UnityEditor.VFX
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("When enabled, particles will cast shadows.")]
         protected bool castShadows = false;
+
+        // MyVFX
+        [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("Render queue's offset.")]
+        protected int queueOffset = 0;
 
         [VFXSetting(VFXSettingAttribute.VisibleFlags.InInspector), SerializeField, Tooltip("When enabled, an exposure weight slider appears in the current output. The slider can be used to control how much influence exposure control will have on the particles.")]
         protected bool useExposureWeight = false;
@@ -506,6 +518,15 @@ namespace UnityEditor.VFX
 
                 var shaderTags = new VFXShaderWriter();
                 var renderQueueStr = subOutput.GetRenderQueueStr();
+                
+                // MyVFX
+                if (queueOffset > 0) {
+                    renderQueueStr = renderQueueStr + "+" + queueOffset;
+                }
+                else if (queueOffset < 0) {
+                    renderQueueStr += queueOffset;
+                }
+
                 var renderTypeStr = isBlendModeOpaque ? "Opaque" : "Transparent";
                 shaderTags.Write(string.Format("Tags {{ \"Queue\"=\"{0}\" \"IgnoreProjector\"=\"{1}\" \"RenderType\"=\"{2}\" }}", renderQueueStr, !isBlendModeOpaque, renderTypeStr));
                 yield return new KeyValuePair<string, VFXShaderWriter>("${VFXShaderTags}", shaderTags);
@@ -513,6 +534,14 @@ namespace UnityEditor.VFX
                 foreach (var additionnalStencilReplacement in subOutput.GetStencilStateOverridesStr())
                 {
                     yield return additionnalStencilReplacement;
+                }
+
+                // MyVFX
+                {
+                    var st = new VFXShaderWriter();
+                    st.Write('"' + this.renderTag + '"');
+
+                    yield return new KeyValuePair<string, VFXShaderWriter>("${VFXPassForward}", st);
                 }
             }
         }
@@ -565,6 +594,11 @@ namespace UnityEditor.VFX
                     case CullMode.Off: rs.WriteLine("Cull Off"); break;
                 }
 
+                // MyVFX
+                if (this.stencil > 0) {
+                    rs.WriteLine("Stencil { Ref " + this.stencil + " Comp Equal Pass Zero Fail Keep ZFail Keep}");
+                }
+
                 return rs;
             }
         }
@@ -585,7 +619,7 @@ namespace UnityEditor.VFX
             }
         }
 
-        public virtual bool SupportsMotionVectorPerVertex(out uint vertsCount)
+        public bool SupportsMotionVectorPerVertex(out uint vertsCount)
         {
             switch (taskType)
             {
@@ -617,7 +651,7 @@ namespace UnityEditor.VFX
             base.GenerateErrors(manager);
             var dataParticle = GetData() as VFXDataParticle;
 
-            if (dataParticle != null && dataParticle.boundsMode != BoundsSettingMode.Manual)
+            if (dataParticle != null && dataParticle.boundsSettingMode != BoundsSettingMode.Manual)
             {
                 var modifiedBounds = children
                     .SelectMany(b =>

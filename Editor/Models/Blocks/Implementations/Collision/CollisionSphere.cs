@@ -35,14 +35,22 @@ namespace UnityEditor.VFX.Block
                     yield return param;
                 }
 
+                bool integrateRadiusIntoScale = true;
                 VFXExpression finalTransform;
 
-                //Integrate directly the radius into the common transform matrix
-                var radiusScale = VFXOperatorUtility.UniformScaleMatrix(radius);
-                finalTransform = new VFXExpressionTransformMatrix(transform, radiusScale);
-
-                var isZeroScaled = VFXOperatorUtility.IsTRSMatrixZeroScaled(finalTransform);
-                yield return new VFXNamedExpression(isZeroScaled, "isZeroScaled");
+                if (integrateRadiusIntoScale)
+                {
+                    //Integrate directly the radius into the common transform matrix
+                    var radiusScale = VFXOperatorUtility.UniformScaleMatrix(radius);
+                    finalTransform = new VFXExpressionTransformMatrix(transform, radiusScale);
+                    var one = VFXOperatorUtility.OneExpression[UnityEngine.VFX.VFXValueType.Float];
+                    yield return new VFXNamedExpression(one, "sphere_radius");
+                }
+                else
+                {
+                    finalTransform = transform;
+                    yield return new VFXNamedExpression(radius, "sphere_radius");
+                }
 
                 yield return new VFXNamedExpression(finalTransform, "fieldTransform");
                 yield return new VFXNamedExpression(new VFXExpressionInverseTRSMatrix(finalTransform), "invFieldTransform");
@@ -59,9 +67,6 @@ namespace UnityEditor.VFX.Block
             get
             {
                 var Source = @"
-if (isZeroScaled)
-    return;
-
 float3 nextPos = position + velocity * deltaTime;
 float3 tNextPos = mul(invFieldTransform, float4(nextPos, 1.0f)).xyz;
 ";
@@ -70,7 +75,7 @@ float3 tNextPos = mul(invFieldTransform, float4(nextPos, 1.0f)).xyz;
                     //radius == 0.0f, we could avoid a sqrt before the branch
                     Source += @"
 float sqrLength  = dot(tNextPos, tNextPos);
-if (colliderSign * sqrLength <= colliderSign)
+if (colliderSign * sqrLength <= colliderSign * sphere_radius * sphere_radius)
 {
     float dist = sqrt(sqrLength);";
                 }
@@ -83,13 +88,13 @@ float dist = max(length(tNextPos), VFX_EPSILON);
 float3 relativeScale = (tNextPos/dist) * invFieldScale;
 float radiusCorrection = radius * length(relativeScale);
 dist -= radiusCorrection * colliderSign;
-if (colliderSign * dist <= colliderSign)
+if (colliderSign * dist <= colliderSign * sphere_radius * sphere_radius)
 {";
                 }
                 Source += @"
     float3 n = colliderSign * (tNextPos/dist);
     float3 tPos = mul(invFieldTransform, float4(position, 1.0f)).xyz;
-    tPos -= n * (dist - 1.0f) * colliderSign;
+    tPos -= n * (dist - sphere_radius) * colliderSign;
     position = mul(fieldTransform, float4(tPos.xyz, 1.0f)).xyz;
     n = VFXSafeNormalize(mul(float4(n, 0.0f), invFieldTransform).xyz);
 ";

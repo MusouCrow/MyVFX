@@ -62,8 +62,7 @@ namespace UnityEditor.VFX
 
         public class InputPropertiesPadding
         {
-            [Range(Single.MinValue * 0.5f, Single.MaxValue * 0.5f), /*Avoids overflow when converting from size to extents*/
-             Tooltip(
+            [Tooltip(
                 "Some additional padding to add the culling bounds set above. It can be helpful when using recorded bounds.")]
             public Vector3 boundsPadding = Vector3.zero;
         }
@@ -91,30 +90,26 @@ namespace UnityEditor.VFX
             if ((uint)capacitySetting.value > 1000000)
                 manager.RegisterError("CapacityOver1M", VFXErrorType.PerfWarning, "Systems with large capacities can be slow to simulate");
             var data = GetData() as VFXDataParticle;
-            if (data != null && CanBeCompiled())
+            if (data != null && data.boundsSettingMode == BoundsSettingMode.Recorded
+                && CanBeCompiled())
             {
-                if (data.boundsMode == BoundsSettingMode.Recorded)
+                if (VFXViewWindow.currentWindow?.graphView?.attachedComponent == null ||
+                    !BoardPreferenceHelper.IsVisible(BoardPreferenceHelper.Board.componentBoard, false))
                 {
-                    if (VFXViewWindow.currentWindow?.graphView?.attachedComponent == null ||
-                        !BoardPreferenceHelper.IsVisible(BoardPreferenceHelper.Board.componentBoard, false))
-                    {
-                        manager.RegisterError("NeedsRecording", VFXErrorType.Warning,
-                            "In order to record the bounds, the current graph needs to be attached to a scene instance via the Target Game Object panel");
-                    }
-                    var boundsSlot = inputSlots.FirstOrDefault(s => s.name == "bounds");
-                    if (boundsSlot != null && boundsSlot.HasLink(true))
+                    manager.RegisterError("NeedsRecording", VFXErrorType.Warning,
+                        "In order to record the bounds, the current graph needs to be attached to a scene instance via the Target Game Object panel");
+                }
+
+                try
+                {
+                    var boundsSlot = inputSlots.First(s => s.name == "bounds");
+                    if (boundsSlot.AllChildrenWithLink().Any())
                     {
                         manager.RegisterError("OverriddenRecording", VFXErrorType.Warning,
                             "This system bounds will not be recorded because they are set from operators.");
                     }
                 }
-
-                if (data.boundsMode == BoundsSettingMode.Automatic)
-                {
-                    manager.RegisterError("CullingFlagAlwaysSimulate", VFXErrorType.Warning,
-                        "Setting the system Bounds Mode to Automatic will switch the culling flags of the Visual Effect asset" +
-                        " to 'Always recompute bounds and simulate'.");
-                }
+                catch { /* do nothing*/ }
             }
         }
 
@@ -127,16 +122,16 @@ namespace UnityEditor.VFX
                 var prop = Enumerable.Empty<VFXPropertyWithValue>();
                 if (particleData)
                 {
-                    if (particleData.boundsMode == BoundsSettingMode.Manual)
+                    if (particleData.boundsSettingMode == BoundsSettingMode.Manual)
                     {
                         prop = prop.Concat(PropertiesFromType("InputPropertiesBounds"));
                     }
-                    if (particleData.boundsMode == BoundsSettingMode.Recorded)
+                    if (particleData.boundsSettingMode == BoundsSettingMode.Recorded)
                     {
                         prop = prop.Concat(PropertiesFromType("InputPropertiesBounds"));
                         prop = prop.Concat(PropertiesFromType("InputPropertiesPadding"));
                     }
-                    if (particleData.boundsMode == BoundsSettingMode.Automatic)
+                    if (particleData.boundsSettingMode == BoundsSettingMode.Automatic)
                     {
                         prop = prop.Concat(PropertiesFromType("InputPropertiesPadding"));
                     }
@@ -167,7 +162,7 @@ namespace UnityEditor.VFX
         public override VFXExpressionMapper GetExpressionMapper(VFXDeviceTarget target)
         {
             var particleData = GetData() as VFXDataParticle;
-            bool isRecordedBounds = particleData && particleData.boundsMode == BoundsSettingMode.Recorded;
+            bool isRecordedBounds = particleData && particleData.boundsSettingMode == BoundsSettingMode.Recorded;
             // GPU
             if (target == VFXDeviceTarget.GPU)
             {
@@ -181,7 +176,7 @@ namespace UnityEditor.VFX
             var cpuMapper = new VFXExpressionMapper();
             if (particleData)
             {
-                switch (particleData.boundsMode)
+                switch (particleData.boundsSettingMode)
                 {
                     case BoundsSettingMode.Manual:
                         cpuMapper.AddExpressionsFromSlot(inputSlots[0], -1); // bounds

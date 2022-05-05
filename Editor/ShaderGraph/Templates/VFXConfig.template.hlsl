@@ -43,7 +43,6 @@ ByteAddressBuffer elementToVFXBufferPrevious;
 CBUFFER_START(outputParams)
     float nbMax;
     float systemSeed;
-    float3 cameraXRSettings;
 CBUFFER_END
 
 // Helper macros to always use a valid instanceID
@@ -61,8 +60,6 @@ $splice(VFXSRPCommonInclude)
 $splice(VFXParameterBuffer)
 
 $splice(VFXGeneratedBlockFunction)
-
-#include "Packages/com.unity.visualeffectgraph/Shaders/VFXCommonOutput.hlsl"
 
 struct AttributesElement
 {
@@ -219,12 +216,7 @@ void SetupVFXMatrices(AttributesElement element, inout VFX_SRP_VARYINGS output)
         float3(element.attributes.angleX, element.attributes.angleY, element.attributes.angleZ),
         float3(element.attributes.pivotX, element.attributes.pivotY, element.attributes.pivotZ),
         GetElementSize(element.attributes),
-        element.attributes.position
-
-#if VFX_APPLY_CAMERA_POSITION_IN_ELEMENT_MATRIX
-        + _WorldSpaceCameraPos
-#endif
-    );
+        element.attributes.position);
 
 #if VFX_LOCAL_SPACE
     elementToWorld = mul(ApplyCameraTranslationToMatrix(GetRawUnityObjectToWorld()), elementToWorld);
@@ -241,11 +233,6 @@ void SetupVFXMatrices(AttributesElement element, inout VFX_SRP_VARYINGS output)
         float3(element.attributes.pivotX,element.attributes.pivotY,element.attributes.pivotZ),
         GetElementSize(element.attributes),
         element.attributes.position
-
-#if VFX_APPLY_CAMERA_POSITION_IN_ELEMENT_MATRIX
-        - _WorldSpaceCameraPos
-#endif
-
     );
 
 #if VFX_LOCAL_SPACE
@@ -268,35 +255,25 @@ void SetupVFXMatrices(AttributesElement element, inout VFX_SRP_VARYINGS output)
 #endif
 }
 
-float4 VFXGetPreviousClipPosition(VFX_SRP_ATTRIBUTES input, AttributesElement element)
+VFX_SRP_ATTRIBUTES TransformMeshToPreviousElement(VFX_SRP_ATTRIBUTES input, AttributesElement element)
 {
-    float4 cPreviousPos = float4(0.0f, 0.0f, 0.0f, 1.0f);
+#if VFX_FEATURE_MOTION_VECTORS_FORWARD || USE_MOTION_VECTORS_PASS
+    uint elementToVFXBaseIndex = element.index * 13;
+    uint previousFrameIndex = elementToVFXBufferPrevious.Load(elementToVFXBaseIndex++ << 2);
 
-#if (VFX_FEATURE_MOTION_VECTORS_FORWARD || USE_MOTION_VECTORS_PASS)
-    uint elementIndex = element.index;
-    uint vertexId = input.vertexID;
-    uint elementToVFXBaseIndex;
-    if (TryGetElementToVFXBaseIndex(elementIndex, elementToVFXBaseIndex))
+    float4x4 previousElementToVFX = (float4x4)0;
+    previousElementToVFX[3] = float4(0,0,0,1);
+
+    UNITY_UNROLL
+    for (int itIndexMatrixRow = 0; itIndexMatrixRow < 3; ++itIndexMatrixRow)
     {
-        cPreviousPos = VFXGetPreviousClipPosition(elementToVFXBaseIndex, vertexId);
-    }
-#endif
-
-    return cPreviousPos;
-}
-
-VFX_SRP_ATTRIBUTES VFXTransformMeshToPreviousElement(VFX_SRP_ATTRIBUTES input, AttributesElement element)
-{
-#if (VFX_FEATURE_MOTION_VECTORS_FORWARD || USE_MOTION_VECTORS_PASS)
-    uint elementIndex = element.index;
-    uint elementToVFXBaseIndex;
-    if (TryGetElementToVFXBaseIndex(elementIndex, elementToVFXBaseIndex))
-    {
-        float4x4 previousElementToVFX = VFXGetPreviousElementToVFX(elementToVFXBaseIndex);
-        input.positionOS = mul(previousElementToVFX, float4(input.positionOS, 1.0f)).xyz;
+        uint4 read = elementToVFXBufferPrevious.Load4((elementToVFXBaseIndex + itIndexMatrixRow * 4) << 2);
+        previousElementToVFX[itIndexMatrixRow] = asfloat(read);
     }
 
+    input.positionOS = mul(previousElementToVFX, float4(input.positionOS, 1.0f)).xyz;
 #endif//WRITE_MOTION_VECTOR_IN_FORWARD || USE_MOTION_VECTORS_PASS
+
     return input;
 }
 

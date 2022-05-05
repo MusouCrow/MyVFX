@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using UnityEditor.Experimental.GraphView;
 using UnityEngine;
@@ -132,14 +133,6 @@ namespace UnityEditor.VFX.UI
             m_AddButton.SetEnabled(false);
 
             this.AddManipulator(new ContextualMenuManipulator(BuildContextualMenu));
-
-            // Workaround: output category is in a scrollview which can lead to get the Add button invisible (moved out of the visible viewport of the scrollviewer)
-            var scrollView = this.Q<ScrollView>();
-            if (scrollView != null)
-            {
-                scrollView.RegisterCallback<GeometryChangedEvent, ScrollView>(OnGeometryChanged, scrollView);
-                scrollView.horizontalScroller.valueChanged += x => OnOutputCategoryScrollChanged(scrollView);
-            }
         }
 
         public void LockUI()
@@ -172,23 +165,6 @@ namespace UnityEditor.VFX.UI
             if (m_AddButton.enabledSelf)
                 return DropdownMenuAction.Status.Normal;
             return DropdownMenuAction.Status.Disabled;
-        }
-
-        void OnOutputCategoryScrollChanged(ScrollView scrollView)
-        {
-            OnGeometryChanged(null, scrollView);
-        }
-
-        void OnGeometryChanged(GeometryChangedEvent evt, ScrollView scrollView)
-        {
-            if (scrollView != null)
-            {
-                var addOutputButton = scrollView.Q<Button>("addOutputButton");
-                if (addOutputButton != null)
-                {
-                    addOutputButton.style.left = -scrollView.horizontalScroller.highValue + scrollView.horizontalScroller.value;
-                }
-            }
         }
 
         void BuildContextualMenu(ContextualMenuPopulateEvent evt)

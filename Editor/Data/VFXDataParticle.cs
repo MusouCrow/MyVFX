@@ -223,11 +223,10 @@ namespace UnityEditor.VFX
 
         public bool NeedsComputeBounds() => needsComputeBounds;
 
-        [FormerlySerializedAs("boundsSettingMode")]
         [VFXSetting(VFXSettingAttribute.VisibleFlags.All),
          Tooltip("Specifies how the bounds are set. They can be set manually, recorded in the Target GameObject window, or computed automatically at a small performance cost."),
          SerializeField]
-        public BoundsSettingMode boundsMode = BoundsSettingMode.Recorded;
+        public BoundsSettingMode boundsSettingMode = BoundsSettingMode.Recorded;
 
         public bool hasStrip { get { return dataType == DataType.ParticleStrip; } }
 
@@ -241,7 +240,7 @@ namespace UnityEditor.VFX
                 stripCapacity = 1;
             else if (setting.name == "particlePerStripCount" && particlePerStripCount == 0)
                 particlePerStripCount = 1;
-            else if (setting.name == "boundsMode")
+            else if (setting.name == "boundsSettingMode")
             {
                 //Refresh errors on Output contexts
                 var allSystemOutputContexts = owners.Where(ctx => ctx is VFXAbstractParticleOutput);
@@ -249,14 +248,11 @@ namespace UnityEditor.VFX
                 {
                     ctx.RefreshErrors(GetGraph());
                 }
-
-                if (boundsMode == BoundsSettingMode.Automatic)
-                {
+                if (boundsSettingMode == BoundsSettingMode.Automatic)
                     needsComputeBounds = true;
-                    var graph = GetGraph();
-                    graph.visualEffectResource.cullingFlags = VFXCullingFlags.CullNone;
-                }
             }
+
+
             if (hasStrip)
             {
                 if (setting.name == "dataType") // strip has just been set
@@ -678,7 +674,7 @@ namespace UnityEditor.VFX
                 systemFlag |= VFXSystemFlag.SystemHasDirectLink;
             }
 
-            if (needsComputeBounds || boundsMode == BoundsSettingMode.Automatic)
+            if (needsComputeBounds || boundsSettingMode == BoundsSettingMode.Automatic)
             {
                 systemFlag |= VFXSystemFlag.SystemNeedsComputeBounds;
 
@@ -686,7 +682,7 @@ namespace UnityEditor.VFX
                 systemBufferMappings.Add(new VFXMapping("boundsBuffer", boundsBufferIndex));
             }
 
-            if (boundsMode == BoundsSettingMode.Automatic)
+            if (boundsSettingMode == BoundsSettingMode.Automatic)
             {
                 systemFlag |= VFXSystemFlag.SystemAutomaticBounds;
             }
@@ -1024,7 +1020,7 @@ namespace UnityEditor.VFX
         {
             if (version < 8)
             {
-                SetSettingValue("boundsMode", BoundsSettingMode.Manual);
+                SetSettingValue("boundsSettingMode", BoundsSettingMode.Manual);
             }
             base.Sanitize(version);
         }

@@ -100,7 +100,7 @@ namespace UnityEditor.VFX.UI
 
         public BoundsSettingMode GetSystemBoundsSettingMode(string systemName)
         {
-            return GetSystem(systemName).boundsMode;
+            return GetSystem(systemName).boundsSettingMode;
         }
 
         public VFXBoundsRecorder(VisualEffect effect, VFXView view)
@@ -176,7 +176,7 @@ namespace UnityEditor.VFX.UI
                 return false;
             }
             var boundsSlot = initContext.inputSlots.FirstOrDefault(s => s.name == "bounds");
-            return system.boundsMode == BoundsSettingMode.Recorded && !boundsSlot.AllChildrenWithLink().Any();
+            return system.boundsSettingMode == BoundsSettingMode.Recorded && !boundsSlot.AllChildrenWithLink().Any();
         }
 
         bool NeedsToBeRecorded(VFXDataParticle system, out ExclusionCause cause)
@@ -195,8 +195,8 @@ namespace UnityEditor.VFX.UI
             VFXSlot boundsSlot;
             try
             {
-                boundsSlot = initContext.inputSlots.First(s => s.name == "bounds");
-                if (boundsSlot != null && boundsSlot.HasLink(true))
+                boundsSlot = initContext.inputSlots.FirstOrDefault(s => s.name == "bounds");
+                if (boundsSlot.AllChildrenWithLink().Any())
                 {
                     cause = ExclusionCause.kGraphComputed;
                     return false;
@@ -204,7 +204,7 @@ namespace UnityEditor.VFX.UI
             }
             catch
             {
-                if (system.boundsMode == BoundsSettingMode.Automatic)
+                if (system.boundsSettingMode == BoundsSettingMode.Automatic)
                 {
                     cause = ExclusionCause.kAutomatic;
                     return false;
@@ -213,7 +213,7 @@ namespace UnityEditor.VFX.UI
                 return false;
             }
 
-            if (system.boundsMode == BoundsSettingMode.Manual)
+            if (system.boundsSettingMode == BoundsSettingMode.Manual)
             {
                 cause = ExclusionCause.kManual;
                 return false;
@@ -233,7 +233,7 @@ namespace UnityEditor.VFX.UI
                     if (model is VFXSlot)
                     {
                         var slot = model as VFXSlot;
-                        if (slot.name == "bounds" || slot.name == "boundsPadding")
+                        if (slot.name == "bounds")
                             return;
                         foreach (var data in GetAffectedData(slot))
                         {
@@ -309,8 +309,11 @@ namespace UnityEditor.VFX.UI
                         Bounds currentBounds = m_Effect.GetComputedBounds(systemName);
                         if (currentBounds.size == Vector3.zero)
                             continue;
-                        var padding = m_Effect.GetCurrentPadding(systemName);
-                        currentBounds.extents -= padding;
+                        if (system.space == VFXCoordinateSpace.World)
+                        {
+                            Matrix4x4 worldToLocal = m_Effect.transform.worldToLocalMatrix;
+                            currentBounds = TransformAABBSlow(currentBounds, worldToLocal);
+                        }
                         if (m_FirstBound[systemName])
                         {
                             m_Bounds[systemName] = currentBounds;
@@ -329,6 +332,7 @@ namespace UnityEditor.VFX.UI
 
         void RenderBounds(SceneView sv)
         {
+            //TODO : Render all bounds when the selected system is not "Recorded"
             if (m_IsRecording && m_Effect.gameObject.activeSelf)
             {
                 bool renderAllRecordedBounds = false;
@@ -372,13 +376,8 @@ namespace UnityEditor.VFX.UI
                         continue;
                     }
 
-                    if ((selectedSystems.Contains(systemName) || renderAllRecordedBounds) &&
-                        m_Bounds.ContainsKey(systemName) && NeedsToBeRecorded(system))
-                    {
-                        var padding = m_Effect.GetCurrentPadding(systemName);
-                        var paddedBounds = new Bounds(m_Bounds[systemName].center, 2 * (m_Bounds[systemName].extents + padding));
-                        RenderBoundsSystem(paddedBounds);
-                    }
+                    if ((selectedSystems.Contains(systemName) || renderAllRecordedBounds) && m_Bounds.ContainsKey(systemName) && NeedsToBeRecorded(system))
+                        RenderBoundsSystem(m_Bounds[systemName]);
                 }
             }
         }
@@ -432,10 +431,24 @@ namespace UnityEditor.VFX.UI
             return points;
         }
 
+        private Bounds TransformAABBSlow(Bounds bounds, Matrix4x4 transform)
+        {
+            Vector3[] v = ExtractVerticesFromBounds(bounds);
+            Bounds transformed = new Bounds(transform.MultiplyPoint(v[0]), Vector3.zero);
+
+            for (int i = 1; i < 8; i++)
+            {
+                Vector3 point = transform.MultiplyPoint(v[i]);
+                transformed.Encapsulate(point);
+            }
+            return transformed;
+        }
+
         public void ModifyMode(string syst, BoundsSettingMode mode)
         {
             VFXDataParticle system = GetSystem(syst);
-            system.SetSettingValue("boundsMode", mode);
+            system.boundsSettingMode = mode;
+            system.SetSettingValue("boundsSettingMode", mode);
         }
 
         public void ToggleRecording()
@@ -483,16 +496,13 @@ namespace UnityEditor.VFX.UI
                         break;
                     }
                     var boundsSlot = initContext.inputSlots.FirstOrDefault(s => s.name == "bounds");
-                    // if (initContext.GetOutputSpaceFromSlot(boundsSlot) == VFXCoordinateSpace.Local) //TODO: Investigate why use space instead of GetOutputSpaceFromSlot
-                    var padding = m_Effect.GetCurrentPadding(systemName);
-                    var paddedBounds = new Bounds(m_Bounds[systemName].center, 2 * (m_Bounds[systemName].extents + padding));
-                    if (boundsSlot.space == VFXCoordinateSpace.Local)
-                        boundsSlot.value = new AABox() { center = paddedBounds.center, size = paddedBounds.size };
+                    if (initContext.GetOutputSpaceFromSlot(boundsSlot) == VFXCoordinateSpace.Local) //This should always be the case
+                        boundsSlot.value = new AABox() { center = m_Bounds[systemName].center, size = m_Bounds[systemName].size };
                     else
                     {
-                        //Subject to change depending on the future behavior of AABox w.r.t. to Spaceable
-                        var positionWorld = m_Effect.transform.TransformPoint(paddedBounds.center);
-                        boundsSlot.value = new AABox() { center = positionWorld, size = paddedBounds.size };
+                        var localToWorld = m_Effect.transform.localToWorldMatrix;
+                        var transformedBounds = TransformAABBSlow(m_Bounds[systemName], localToWorld);
+                        boundsSlot.value = new AABox() { center = transformedBounds.center, size = transformedBounds.size };
                     }
                 }
             }

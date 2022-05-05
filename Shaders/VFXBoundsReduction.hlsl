@@ -22,8 +22,7 @@ uint IFloatFlip(uint f)
     return f ^ mask;
 }
 
-
-void InitReduction(VFXAttributes attributes, float3 size3, uint tid, float4x4 worldToLocal)
+void InitReduction(VFXAttributes attributes, float3 size3, uint tid)
 {
     if (attributes.alive)
     {
@@ -35,13 +34,6 @@ void InitReduction(VFXAttributes attributes, float3 size3, uint tid, float4x4 wo
             float3(attributes.pivotX, attributes.pivotY, attributes.pivotZ),
             size3,
             attributes.position);
-
-        #if VFX_WORLD_SPACE
-        // The bounding box is always calculated in localSpace since the AABB in the graph is in local space.
-        // That avoids unnecessary and overly conservation AABB changes of space.
-        elementToVFX = mul(worldToLocal, elementToVFX);
-        #endif
-
         float3 localPos = elementToVFX._m03_m13_m23;
 
         //Bounding sphere

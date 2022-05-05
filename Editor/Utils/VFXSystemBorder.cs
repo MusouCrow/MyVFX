@@ -128,21 +128,8 @@ namespace UnityEditor.VFX.UI
             }
         }
 
-        bool IsDifferenceTooSmall(float x, float y)
-        {
-            return Mathf.Abs(x - y) < 1f;
-        }
-
         void OnTitleRelayout(GeometryChangedEvent e)
         {
-            if (IsDifferenceTooSmall(e.oldRect.x, e.newRect.x) &&
-                IsDifferenceTooSmall(e.oldRect.y, e.newRect.y) &&
-                IsDifferenceTooSmall(e.oldRect.width, e.newRect.width) &&
-                IsDifferenceTooSmall(e.oldRect.height, e.newRect.height))
-            {
-                return;
-            }
-
             UpdateTitleFieldRect();
             RecomputeBounds();
         }
@@ -150,6 +137,7 @@ namespace UnityEditor.VFX.UI
         void UpdateTitleFieldRect()
         {
             Rect rect = m_Title.layout;
+
             m_Title.parent.ChangeCoordinatesTo(m_TitleField.parent, rect);
 
 
@@ -203,12 +191,11 @@ namespace UnityEditor.VFX.UI
         {
             if (m_WaitingRecompute)
                 return;
-
             visible = true;
             //title width should be at least as wide as a context to be valid.
             float titleWidth = m_Title.layout.width;
-            bool shouldDeferRecompute = float.IsNaN(titleWidth) || titleWidth < 50;
-            bool titleEmpty = string.IsNullOrEmpty(m_Title.text) || shouldDeferRecompute;
+            bool invalidTitleWidth = float.IsNaN(titleWidth) || titleWidth < 50;
+            bool titleEmpty = string.IsNullOrEmpty(m_Title.text) || invalidTitleWidth;
             if (titleEmpty)
             {
                 m_Title.AddToClassList("empty");
@@ -239,12 +226,11 @@ namespace UnityEditor.VFX.UI
             }
 
             if (float.IsNaN(rect.xMin) || float.IsNaN(rect.yMin) || float.IsNaN(rect.width) || float.IsNaN(rect.height))
-            {
                 rect = Rect.zero;
-            }
 
             rect = RectUtils.Inflate(rect, 20, titleEmpty ? 20 : m_Title.layout.height, 20, 20);
-            if (shouldDeferRecompute)
+
+            if (invalidTitleWidth)
             {
                 SetPosition(rect);
                 if (!m_WaitingRecompute)

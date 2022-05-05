@@ -153,7 +153,7 @@ namespace UnityEditor.VFX.UI
                         selection.ClearSelection();
                         selection.AddToSelection(this);
                     }
-                    else
+                    else // prevent heterogenous selections between stack child nodes and other nodes
                     {
                         selection.AddToSelection(this);
                     }

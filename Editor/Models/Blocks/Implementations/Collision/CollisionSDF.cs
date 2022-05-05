@@ -28,7 +28,6 @@ namespace UnityEditor.VFX.Block
                 {
                     if (input.name == "FieldTransform")
                     {
-                        yield return new VFXNamedExpression(VFXOperatorUtility.IsTRSMatrixZeroScaled(input.exp), "isZeroScaled");
                         yield return new VFXNamedExpression(new VFXExpressionInverseTRSMatrix(input.exp), "InvFieldTransform");
                         yield return new VFXNamedExpression(VFXOperatorUtility.Max3(new VFXExpressionExtractScaleFromMatrix(input.exp)), "scalingFactor");
                     }
@@ -41,10 +40,8 @@ namespace UnityEditor.VFX.Block
             get
             {
                 string Source = @"
-if (isZeroScaled)
-    return;
-
 float3 nextPos = position + velocity * deltaTime;
+
 
 float3 tPos = mul(InvFieldTransform, float4(nextPos,1.0f)).xyz;
 float3 coord = saturate(tPos + 0.5f);

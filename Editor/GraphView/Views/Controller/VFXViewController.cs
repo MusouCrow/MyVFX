@@ -1356,7 +1356,7 @@ namespace UnityEditor.VFX.UI
             }
         }
 
-        internal VFXViewController(VisualEffectResource vfx) : base(vfx)
+        VFXViewController(VisualEffectResource vfx) : base(vfx)
         {
             ModelChanged(vfx); // This will initialize the graph from the vfx asset.
 

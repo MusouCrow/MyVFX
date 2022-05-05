@@ -1657,15 +1657,7 @@ namespace UnityEditor.VFX.UI
                 if (EditorUtility.IsDirty(graph) || UnityEngine.Object.ReferenceEquals(graph, controller.graph))
                 {
                     graph.UpdateSubAssets();
-                    try
-                    {
-                        VFXGraph.compilingInEditMode = !m_IsRuntimeMode;
-                        graph.GetResource().WriteAsset();
-                    }
-                    finally
-                    {
-                        VFXGraph.compilingInEditMode = false;
-                    }
+                    graph.GetResource().WriteAsset();
                 }
             }
         }
@@ -2046,12 +2038,6 @@ namespace UnityEditor.VFX.UI
             (groupNode as VFXGroupNode).GroupNodeTitleChanged(title);
         }
 
-        private void AddRangeToSelection(List<ISelectable> selectables)
-        {
-            selectables.ForEach(base.AddToSelection);
-            UpdateGlobalSelection();
-        }
-
         public override void AddToSelection(ISelectable selectable)
         {
             base.AddToSelection(selectable);
@@ -2256,60 +2242,50 @@ namespace UnityEditor.VFX.UI
             Profiler.EndSample();
         }
 
-        private bool TryGetOverlappingContextAbove(VFXContextUI context, out VFXContextUI overlappingContext, out float distance)
-        {
-            var rect = context.GetPosition();
-            var posY = context.controller.model.position.y;
-
-            var overlappingContexts = new Dictionary<VFXContextUI, float>();
-            foreach (var ctx in GetAllContexts())
-            {
-                if (ctx == context)
-                {
-                    continue;
-                }
-
-                var ctxRect = ctx.GetPosition();
-                var ctxPosY = ctx.controller.model.position.y;
-
-                // Skip contexts that are side by side
-                if (rect.xMin - ctxRect.xMax > -5 || rect.xMax - ctxRect.xMin < 5)
-                {
-                    continue;
-                }
-
-                distance = posY - ctxPosY - ctxRect.height;
-                if (distance < 0 && posY > ctxRect.yMin)
-                {
-                    overlappingContexts[ctx] = -distance;
-                }
-            }
-
-            if (overlappingContexts.Any())
-            {
-                var keyPair = overlappingContexts.OrderByDescending(x => x.Value).First();
-                overlappingContext = keyPair.Key;
-                distance = keyPair.Value;
-                return true;
-            }
-
-            distance = 0f;
-            overlappingContext = null;
-            return false;
-        }
-
+        const float k_MarginBetweenContexts = 30;
         public void PushUnderContext(VFXContextUI context, float size)
         {
             if (size < 5) return;
 
-            foreach (var edge in edges.OfType<VFXFlowEdge>().SkipWhile(x => x.output.GetFirstAncestorOfType<VFXContextUI>() != context))
+            HashSet<VFXContextUI> contexts = new HashSet<VFXContextUI>();
+
+            contexts.Add(context);
+
+            var flowEdges = edges.ToList().OfType<VFXFlowEdge>().ToList();
+
+            int contextCount = 0;
+
+            while (contextCount < contexts.Count())
             {
-                context = edge.input.GetFirstAncestorOfType<VFXContextUI>();
-                if (TryGetOverlappingContextAbove(context, out var aboveContext, out var distance))
+                contextCount = contexts.Count();
+                foreach (var flowEdge in flowEdges)
                 {
-                    var rect = context.GetPosition();
-                    context.controller.position = new Vector2(rect.x, rect.y + distance);
+                    VFXContextUI topContext = flowEdge.output.GetFirstAncestorOfType<VFXContextUI>();
+                    VFXContextUI bottomContext = flowEdge.input.GetFirstAncestorOfType<VFXContextUI>();
+                    if (contexts.Contains(topContext) && !contexts.Contains(bottomContext))
+                    {
+                        float topContextBottom = topContext.layout.yMax;
+                        float newTopContextBottom = topContext.layout.yMax + size;
+                        if (topContext == context)
+                        {
+                            newTopContextBottom -= size;
+                            topContextBottom -= size;
+                        }
+                        float bottomContextTop = bottomContext.layout.yMin;
+
+                        if (topContextBottom < bottomContextTop && newTopContextBottom + k_MarginBetweenContexts > bottomContextTop)
+                        {
+                            contexts.Add(bottomContext);
+                        }
+                    }
                 }
+            }
+
+            contexts.Remove(context);
+
+            foreach (var c in contexts)
+            {
+                c.controller.position = c.GetPosition().min + new Vector2(0, size);
             }
         }
 
@@ -2358,7 +2334,10 @@ namespace UnityEditor.VFX.UI
             {
                 ClearSelection();
 
-                AddRangeToSelection(graphElements.Where(x => x is not VFXSystemBorder).OfType<ISelectable>().ToList());
+                foreach (var element in graphElements.ToList())
+                {
+                    AddToSelection(element);
+                }
                 e.StopPropagation();
             }
         }

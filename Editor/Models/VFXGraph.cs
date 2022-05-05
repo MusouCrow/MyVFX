@@ -265,15 +265,7 @@ namespace UnityEditor.VFX
                 if (vfxResource != null)
                 {
                     vfxResource.GetOrCreateGraph().UpdateSubAssets();
-                    try
-                    {
-                        VFXGraph.compilingInEditMode = vfxResource.GetOrCreateGraph().GetCompilationMode() == VFXCompilationMode.Edition;
-                        vfxResource.WriteAsset(); // write asset as the AssetDatabase won't do it.
-                    }
-                    finally
-                    {
-                        VFXGraph.compilingInEditMode = false;
-                    }
+                    vfxResource.WriteAsset(); // write asset as the AssetDatabase won't do it.
                 }
             }
             Profiler.EndSample();
@@ -362,8 +354,6 @@ namespace UnityEditor.VFX
 
         public readonly VFXErrorManager errorManager = new VFXErrorManager();
 
-        [NonSerialized]
-        internal static bool compilingInEditMode = false;
 
         public override void OnEnable()
         {
@@ -704,11 +694,6 @@ namespace UnityEditor.VFX
             }
         }
 
-        public VFXCompilationMode GetCompilationMode()
-        {
-            return m_CompilationMode;
-        }
-
         public void SetForceShaderValidation(bool forceShaderValidation, bool reimport = true)
         {
             if (m_ForceShaderValidation != forceShaderValidation)
@@ -948,9 +933,6 @@ namespace UnityEditor.VFX
 
         public void CompileForImport()
         {
-            if (VFXGraph.compilingInEditMode)
-                m_CompilationMode = VFXCompilationMode.Edition;
-
             if (!GetResource().isSubgraph)
             {
                 // Don't pursue the compile if one of the dependency is not yet loaded
