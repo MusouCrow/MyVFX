@@ -47,7 +47,7 @@ namespace UnityEditor.VFX
                 while (true)
                 {
                     var targetCopy = target.ToString();
-                    var index = targetCopy.IndexOf(targetQuery);
+                    var index = targetCopy.IndexOf(targetQuery, StringComparison.Ordinal);
                     if (index == -1)
                     {
                         break;
@@ -296,7 +296,7 @@ namespace UnityEditor.VFX
 
             int currentPos = -1;
             int builderOffset = 0;
-            while ((currentPos = source.IndexOf("${")) != -1)
+            while ((currentPos = source.IndexOf("${", StringComparison.Ordinal)) != -1)
             {
                 int endPos = source.IndexOf('}', currentPos);
                 if (endPos == -1)
@@ -585,7 +585,8 @@ namespace UnityEditor.VFX
             globalIncludeContent.WriteLine("#define VFX_PASSDEPTH_ACTUAL (0)");
             globalIncludeContent.WriteLine("#define VFX_PASSDEPTH_MOTION_VECTOR (1)");
             globalIncludeContent.WriteLine("#define VFX_PASSDEPTH_SELECTION (2)");
-            globalIncludeContent.WriteLine("#define VFX_PASSDEPTH_SHADOW (3)");
+            globalIncludeContent.WriteLine("#define VFX_PASSDEPTH_PICKING (3)");
+            globalIncludeContent.WriteLine("#define VFX_PASSDEPTH_SHADOW (4)");
 
             foreach (var attribute in allCurrentAttributes)
                 globalIncludeContent.WriteLineFormat("#define VFX_USE_{0}_{1} 1", attribute.attrib.name.ToUpper(CultureInfo.InvariantCulture), "CURRENT");
@@ -715,6 +716,11 @@ namespace UnityEditor.VFX
                 var storeAttributes = GenerateStoreAttribute(pattern, context, (uint)linkedEventOut.Count);
                 ReplaceMultiline(stringBuilder, str, storeAttributes.builder);
             }
+
+            //< Detect needed pragma require
+            var useCubeArray = contextData.uniformMapper.textures.Any(o => o.valueType == VFXValueType.TextureCubeArray);
+            var pragmaRequire = useCubeArray ? new StringBuilder("#pragma require cubearray") : new StringBuilder();
+            ReplaceMultiline(stringBuilder, "${VFXPragmaRequire}", pragmaRequire);
 
             foreach (var addionalReplacement in context.additionalReplacements)
             {

@@ -16,6 +16,8 @@ namespace UnityEditor.VFX
     {
         public struct ShaderGraphBinder
         {
+            public static readonly PragmaDescriptor kPragmaDescriptorNone = new() { value = "None" };
+
             public StructCollection structs;
             public DependencyCollection fieldDependencies;
             public (PragmaDescriptor oldDesc, PragmaDescriptor newDesc)[] pragmasReplacement;
@@ -45,6 +47,8 @@ namespace UnityEditor.VFX
         {
             return VFXAbstractRenderedOutput.BlendMode.Opaque;
         }
+
+        public virtual bool GetSupportsMotionVectorPerVertex(ShaderGraphVfxAsset shaderGraph, VFXMaterialSerializedSettings materialSettings) => true;
 
         public virtual bool TransparentMotionVectorEnabled(Material mat) => true;
 

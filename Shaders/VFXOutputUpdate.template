@@ -1,5 +1,7 @@
 #pragma kernel CSMain
-#pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch opengl
+#pragma only_renderers d3d11 playstation xboxone xboxseries vulkan metal switch glcore gles3
+${VFXPragmaRequire}
+
 ${VFXGlobalInclude}
 ${VFXGlobalDeclaration}
 
@@ -219,6 +221,7 @@ void CSMain(uint3 groupId		: SV_GroupID,
                 elementToVFXBuffer.Store(elementToVFXIndex++ << 2, attributes.alive ? asuint(currentFrameIndex) : 0u);
 #ifdef VFX_FEATURE_MOTION_VECTORS_VERTS
                 elementToVFXIndex += viewOffset * viewCount * VFX_FEATURE_MOTION_VECTORS_VERTS * 2;
+                ${VFXLoadParameter:{targetOffset}}
                 ${VFXMotionVectorVerts}
 #ifdef USING_STEREO_MATRICES
                 if (viewCount == 2)

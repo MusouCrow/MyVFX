@@ -60,9 +60,11 @@ namespace UnityEditor.VFX
                 }
             }
 
+           
             //Relaunch previously skipped OnCompileResource
             if (assetToReimport != null)
             {
+                AssetDatabase.StartAssetEditing();
                 foreach (var assetPath in assetToReimport)
                 {
                     try
@@ -74,6 +76,7 @@ namespace UnityEditor.VFX
                         Debug.LogErrorFormat("Exception during reimport of {0} : {1}", assetPath, exception);
                     }
                 }
+                AssetDatabase.StopAssetEditing();
             }
         }
 
@@ -173,7 +176,6 @@ namespace UnityEditor.VFX
         static void CheckCompilationVersion()
         {
             EditorApplication.update -= CheckCompilationVersion;
-            string[] allVisualEffectAssets = AssetDatabase.FindAssets("t:VisualEffectAsset");
 
             UnityObject vfxmanager = AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/VFXManager.asset").FirstOrDefault();
             SerializedObject serializedVFXManager = new SerializedObject(vfxmanager);
@@ -182,6 +184,7 @@ namespace UnityEditor.VFX
 
             if (compiledVersionProperty.intValue != VFXGraphCompiledData.compiledVersion || runtimeVersionProperty.intValue != VisualEffectAsset.currentRuntimeDataVersion)
             {
+                string[] allVisualEffectAssets = AssetDatabase.FindAssets("t:VisualEffectAsset");
                 compiledVersionProperty.intValue = (int)VFXGraphCompiledData.compiledVersion;
                 runtimeVersionProperty.intValue = (int)VisualEffectAsset.currentRuntimeDataVersion;
                 serializedVFXManager.ApplyModifiedProperties();
@@ -265,7 +268,15 @@ namespace UnityEditor.VFX
                 if (vfxResource != null)
                 {
                     vfxResource.GetOrCreateGraph().UpdateSubAssets();
-                    vfxResource.WriteAsset(); // write asset as the AssetDatabase won't do it.
+                    try
+                    {
+                        VFXGraph.compilingInEditMode = vfxResource.GetOrCreateGraph().GetCompilationMode() == VFXCompilationMode.Edition;
+                        vfxResource.WriteAsset(); // write asset as the AssetDatabase won't do it.
+                    }
+                    finally
+                    {
+                        VFXGraph.compilingInEditMode = false;
+                    }
                 }
             }
             Profiler.EndSample();
@@ -350,10 +361,13 @@ namespace UnityEditor.VFX
         // 6: Remove automatic strip orientation from quad strip context
         // 7: Add CameraBuffer type
         // 8: Bounds computation introduces a BoundsSettingMode for VFXDataParticles
-        public static readonly int CurrentVersion = 8;
+        // 9: Update HDRP decal angle fade encoding
+        public static readonly int CurrentVersion = 9;
 
         public readonly VFXErrorManager errorManager = new VFXErrorManager();
 
+        [NonSerialized]
+        internal static bool compilingInEditMode = false;
 
         public override void OnEnable()
         {
@@ -694,6 +708,11 @@ namespace UnityEditor.VFX
             }
         }
 
+        public VFXCompilationMode GetCompilationMode()
+        {
+            return m_CompilationMode;
+        }
+
         public void SetForceShaderValidation(bool forceShaderValidation, bool reimport = true)
         {
             if (m_ForceShaderValidation != forceShaderValidation)
@@ -933,6 +952,9 @@ namespace UnityEditor.VFX
 
         public void CompileForImport()
         {
+            if (VFXGraph.compilingInEditMode)
+                m_CompilationMode = VFXCompilationMode.Edition;
+
             if (!GetResource().isSubgraph)
             {
                 // Don't pursue the compile if one of the dependency is not yet loaded

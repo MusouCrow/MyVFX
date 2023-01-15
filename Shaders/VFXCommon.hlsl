@@ -38,14 +38,6 @@
 #define UNITY_INV_HALF_PI   0.636619772367f
 #endif
 
-// SHADER_AVAILABLE_XXX defines are not yet passed to compute shader atm
-// So we define it manually for compute atm.
-// It won't compile for devices that don't have cubemap array support but this is acceptable by now
-// TODO Remove this once SHADER_AVAILABLE_XXX are passed to compute shaders
-#ifdef SHADER_STAGE_COMPUTE
-#define SHADER_AVAILABLE_CUBEARRAY 1
-#endif
-
 struct VFXSampler2D
 {
     Texture2D t;
@@ -70,6 +62,7 @@ struct VFXSamplerCube
     SamplerState s;
 };
 
+//Warning: this define 'SHADER_AVAILABLE_CUBEARRAY' relies on '#pragma require cubearray'
 #if SHADER_AVAILABLE_CUBEARRAY
 struct VFXSamplerCubeArray
 {
@@ -107,6 +100,19 @@ float4 TransformPositionVFXToNonJitteredClip(float3 pos) { return VFXTransformPo
 float3x3 GetVFXToViewRotMatrix() { return mul(VFXGetWorldToViewRotMatrix(), (float3x3)VFXGetObjectToWorldMatrix()); }
 float3 GetViewVFXPosition() { return mul(VFXGetWorldToObjectMatrix(), float4(VFXGetViewWorldPosition(), 1.0f)).xyz; }
 #endif
+
+float3 VFXSafeNormalize(float3 v)
+{
+    float sqrLength = max(VFX_FLT_MIN, dot(v, v));
+    return v * rsqrt(sqrLength);
+}
+
+float3 VFXSafeNormalizedCross(float3 v1, float3 v2, float3 fallback)
+{
+    float3 outVec = cross(v1, v2);
+    outVec = dot(outVec, outVec) < VFX_EPSILON ? fallback : normalize(outVec);
+    return outVec;
+}
 
 #define VFX_SAMPLER(name) GetVFXSampler(name,sampler##name)
 
@@ -232,7 +238,7 @@ float3 GetNormalFromSDF(VFXSampler3D s, float3 uvw, float level = 0.0f)
     float3 normal;
     if (outsideDist > 0.5f) // Check whether point is outside the box
     {
-        normal = normalize(uvw - 0.5f);
+        normal = VFXSafeNormalize(uvw - 0.5f);
     }
     else
     {
@@ -240,7 +246,7 @@ float3 GetNormalFromSDF(VFXSampler3D s, float3 uvw, float level = 0.0f)
         float3 dir = SampleSDFDerivatives(s, projUVW, level);
         if (dist < 0)
             dir = -dir;
-        normal =  normalize(dir);
+        normal =  VFXSafeNormalize(dir);
     }
     return normal;
 }
@@ -484,6 +490,11 @@ float4x4 VFXCreateMatrixFromColumns(float4 i, float4 j, float4 k, float4 o)
                     i.w, j.w, k.w, o.w);
 }
 
+float4 VFXGetColumnFromMatrix(float4x4 mat, int column)
+{
+    return transpose(mat)[column];
+}
+
 // Invert 3D transformation matrix (not perspective). Adapted from graphics gems 2.
 // Inverts upper left by calculating its determinant and multiplying it to the symmetric
 // adjust matrix of each element. Finally deals with the translation by transforming the
@@ -596,19 +607,6 @@ float4x4 GetVFXToElementMatrix(float3 axisX, float3 axisY, float3 axisZ, float3 
         float4(rotAndScale[1], pos.y),
         float4(rotAndScale[2], pos.z),
         float4(0, 0, 0, 1));
-}
-
-float3 VFXSafeNormalize(float3 v)
-{
-    float sqrLength = max(VFX_FLT_MIN, dot(v, v));
-    return v * rsqrt(sqrLength);
-}
-
-float3 VFXSafeNormalizedCross(float3 v1, float3 v2, float3 fallback)
-{
-    float3 outVec = cross(v1, v2);
-    outVec = dot(outVec, outVec) < VFX_EPSILON ? fallback : normalize(outVec);
-    return outVec;
 }
 
 /////////////////////
